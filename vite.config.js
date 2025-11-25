@@ -3,5 +3,5 @@ import react from '@vitejs/plugin-react'
 
 export default defineConfig({
   plugins: [react()],
-  base: '/conspiracy-card-game/', // MUST match your repo name
+  base: '/fruit-seller-game/', // MUST match your repo name
 })
