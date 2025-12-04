@@ -47,18 +47,18 @@ import {
 
 // --- Firebase Config & Init ---
 const firebaseConfig = {
-  apiKey: "AIzaSyDf86JHBvY9Y1B1x8QDbJkASmlANouEvX0",
-  authDomain: "card-games-28729.firebaseapp.com",
-  projectId: "card-games-28729",
-  storageBucket: "card-games-28729.firebasestorage.app",
-  messagingSenderId: "466779458834",
-  appId: "1:466779458834:web:68572dd0fd90119f6d37cb",
+  apiKey: "AIzaSyBjIjK53vVJW1y5RaqEFGSFp0ECVDBEe1o",
+  authDomain: "game-hub-ff8aa.firebaseapp.com",
+  projectId: "game-hub-ff8aa",
+  storageBucket: "game-hub-ff8aa.firebasestorage.app",
+  messagingSenderId: "586559578902",
+  appId: "1:586559578902:web:43740f2189a0de886aa637"
 };
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-const APP_ID = typeof __app_id !== "undefined" ? __app_id : "fruit-seller-v7";
+const APP_ID = typeof __app_id !== "undefined" ? __app_id : "fruit-seller-game";
 
 // --- Game Constants & Thematic Data ---
 const FRUITS = {
