@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { initializeApp } from "firebase/app";
 import {
   getAuth,
@@ -12,6 +12,7 @@ import {
   setDoc,
   getDoc,
   updateDoc,
+  deleteDoc,
   onSnapshot,
   arrayUnion,
   increment,
@@ -22,7 +23,7 @@ import {
   Cherry,
   Citrus,
   Grape,
-  Circle, // Fallback for Mango
+  Circle,
   Play,
   Users,
   Trophy,
@@ -33,6 +34,15 @@ import {
   CheckCircle,
   Crown,
   Bot,
+  Scroll,
+  Settings,
+  AlertTriangle,
+  ShoppingBag,
+  Store,
+  Home,
+  History,
+  Shield,
+  BookOpen,
 } from "lucide-react";
 
 // --- Firebase Config & Init ---
@@ -42,57 +52,72 @@ const firebaseConfig = {
   projectId: "card-games-28729",
   storageBucket: "card-games-28729.firebasestorage.app",
   messagingSenderId: "466779458834",
-  appId: "1:466779458834:web:4209d2fa804d48d06d37cb",
+  appId: "1:466779458834:web:68572dd0fd90119f6d37cb",
 };
-
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-// App ID constant
-const APP_ID = typeof __app_id !== "undefined" ? __app_id : "fruit-seller-v2";
+const APP_ID = typeof __app_id !== "undefined" ? __app_id : "fruit-seller-v7";
 
-// --- Game Constants ---
+// --- Game Constants & Thematic Data ---
 const FRUITS = {
-  MANGO: {
-    name: "Mango",
-    color: "bg-amber-400",
-    text: "text-amber-900",
-    icon: Circle,
+  GRAPE: {
+    name: "Grape",
+    icon: Grape,
+    color: "text-violet-400",
+    bg: "bg-gray-900",
+    border: "border-violet-500",
+    desc: "Vine Ripened",
+    value: 1,
   },
   APPLE: {
     name: "Apple",
-    color: "bg-red-500",
-    text: "text-white",
     icon: Apple,
+    color: "text-red-500",
+    bg: "bg-gray-900",
+    border: "border-red-600",
+    desc: "Crisp & Crunchy",
+    value: 2,
   },
   ORANGE: {
     name: "Orange",
-    color: "bg-orange-500",
-    text: "text-white",
     icon: Citrus,
+    color: "text-orange-500",
+    bg: "bg-gray-900",
+    border: "border-orange-600",
+    desc: "Citrus Energy",
+    value: 3,
   },
   BANANA: {
     name: "Banana",
-    color: "bg-yellow-300",
-    text: "text-yellow-900",
     icon: Banana,
+    color: "text-yellow-400",
+    bg: "bg-gray-900",
+    border: "border-yellow-500",
+    desc: "High Potassium",
+    value: 4,
   },
   LEMON: {
     name: "Lemon",
-    color: "bg-lime-400",
-    text: "text-lime-900",
     icon: Citrus,
+    color: "text-lime-400",
+    bg: "bg-gray-900",
+    border: "border-lime-500",
+    desc: "Sour Power",
+    value: 5,
   },
-  BERRY: {
-    name: "Berry",
-    color: "bg-purple-600",
-    text: "text-white",
+  CHERRY: {
+    name: "Cherry",
     icon: Cherry,
+    color: "text-pink-500",
+    bg: "bg-gray-900",
+    border: "border-pink-600",
+    desc: "Sweet & Tart",
+    value: 6,
   },
 };
-
-const FRUIT_ORDER = ["MANGO", "APPLE", "ORANGE", "BANANA", "LEMON", "BERRY"];
+const FRUIT_ORDER = ["GRAPE", "APPLE", "ORANGE", "BANANA", "LEMON", "CHERRY"];
 
 // --- Helper Functions ---
 const shuffle = (array) => {
@@ -113,7 +138,6 @@ const generateDeck = (numPlayers) => {
   const activeFruits = FRUIT_ORDER.slice(0, numPlayers);
   let deck = [];
   activeFruits.forEach((fruitKey) => {
-    // 5 cards of each fruit
     for (let i = 0; i < 5; i++) {
       deck.push({
         type: fruitKey,
@@ -126,13 +150,11 @@ const generateDeck = (numPlayers) => {
 
 // --- Bot Logic ---
 const getBotMove = (hand) => {
-  // Count frequencies
   const counts = {};
   hand.forEach((card) => {
     counts[card.type] = (counts[card.type] || 0) + 1;
   });
 
-  // Identify target fruit (the one we have most of)
   let targetFruit = null;
   let maxCount = -1;
 
@@ -142,137 +164,363 @@ const getBotMove = (hand) => {
       targetFruit = type;
     }
   });
-
-  // Find candidates to discard (anything NOT the target fruit)
-  // If we only have target fruit, we just pick the first one (rare, usually means win)
   let candidates = hand
     .map((card, index) => ({ ...card, index }))
     .filter((c) => c.type !== targetFruit);
-
-  if (candidates.length === 0) {
-    // We have all same fruits (likely winning, but need to pass if we have 6)
-    return 0; // Just pass the first one
-  }
-
-  // Smart discard: discard the one with the lowest count in hand (get rid of outliers)
+  if (candidates.length === 0) return 0;
   candidates.sort((a, b) => (counts[a.type] || 0) - (counts[b.type] || 0));
-
   return candidates[0].index;
 };
 
-// --- Sub-Components ---
+// --- UI Components ---
 
-const Card = ({ type, onClick, isSelected, size = "md" }) => {
-  const fruit = FRUITS[type];
-  if (!fruit) return <div className="bg-gray-700 w-16 h-24 rounded"></div>;
-
-  const Icon = fruit.icon;
-  const sizeClasses =
-    size === "sm" ? "w-12 h-16 text-[10px]" : "w-24 h-36 text-sm";
-  const iconSize = size === "sm" ? 16 : 32;
-
-  return (
+const FloatingBackground = () => (
+  <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
+    <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-gray-800 via-gray-900 to-black opacity-80" />
     <div
-      onClick={onClick}
-      className={`
-        relative rounded-xl shadow-lg border-2 flex flex-col items-center justify-center transition-all duration-200 cursor-pointer
-        ${fruit.color} ${fruit.text} ${sizeClasses}
-        ${
-          isSelected
-            ? "ring-4 ring-white scale-110 z-10 -translate-y-2 shadow-xl"
-            : "border-black/10 hover:-translate-y-1"
-        }
-      `}
-    >
-      <span className="font-bold uppercase tracking-wider mb-1">
-        {fruit.name}
-      </span>
-      <Icon size={iconSize} className="drop-shadow-sm" />
-      <div className="absolute top-1 right-1 opacity-50">
-        <Icon size={10} />
-      </div>
-      <div className="absolute bottom-1 left-1 opacity-50">
-        <Icon size={10} />
-      </div>
-    </div>
-  );
-};
+      className="absolute inset-0 opacity-10"
+      style={{
+        backgroundImage:
+          'url("https://www.transparenttextures.com/patterns/black-scales.png")',
+      }}
+    ></div>
+  </div>
+);
 
-const CardBack = ({ count }) => (
-  <div className="w-16 h-24 bg-gradient-to-br from-indigo-600 to-blue-800 rounded-lg border-2 border-indigo-400 shadow-md flex items-center justify-center relative transform rotate-1">
-    <div className="absolute inset-2 border border-dashed border-indigo-400/50 rounded"></div>
-    <span className="text-2xl font-bold text-white drop-shadow-md">
-      {count}
+const FruitSellerLogo = () => (
+  <div className="flex items-center justify-center gap-1 opacity-40 pb-2 pt-2 relative z-10">
+    <Store size={12} className="text-orange-500" />
+    <span className="text-[10px] font-black tracking-widest text-orange-500 uppercase">
+      FRUIT SELLER
     </span>
   </div>
 );
 
-const RulesModal = ({ onClose }) => (
-  <div className="fixed inset-0 bg-black/90 z-[100] flex items-center justify-center p-4">
-    <div className="bg-white text-gray-900 rounded-2xl w-full max-w-lg p-6 relative shadow-2xl">
-      <button
-        onClick={onClose}
-        className="absolute top-4 right-4 text-gray-400 hover:text-black"
-      >
-        <X size={24} />
-      </button>
-      <h2 className="text-3xl font-black text-orange-600 mb-4 flex items-center gap-2">
-        <Citrus /> Fruit Seller
-      </h2>
-      <div className="space-y-4 text-lg">
-        <p>
-          <strong>Goal:</strong> Collect <strong>5 cards</strong> of the same
-          fruit to win!
-        </p>
-        <div className="bg-orange-50 p-4 rounded-xl border border-orange-200">
-          <h3 className="font-bold text-orange-800 mb-2">How to Play:</h3>
-          <ul className="list-disc pl-5 space-y-2 text-gray-700">
-            <li>
-              Everyone starts with <strong>5 cards</strong>.
-            </li>
-            <li>
-              On your turn, pick <strong>ONE card</strong> to pass to the player
-              on your left.
-            </li>
-            <li>
-              If players are missing, <strong>Bots</strong> will fill the spots!
-            </li>
-            <li>Bots are smart—watch out!</li>
-          </ul>
-        </div>
+const LeaveConfirmModal = ({
+  onConfirmLeave,
+  onConfirmLobby,
+  onCancel,
+  isHost,
+  inGame,
+}) => (
+  <div className="fixed inset-0 bg-black/90 z-[200] flex items-center justify-center p-4 animate-in fade-in">
+    <div className="bg-slate-800 rounded-xl border border-slate-700 p-6 max-w-sm w-full text-center shadow-2xl">
+      <h3 className="text-xl font-bold text-white mb-2">Close Stall?</h3>
+      <p className="text-slate-400 mb-6 text-sm">
+        {inGame
+          ? "Leaving now will collapse the market for everyone!"
+          : "Leaving the market lobby will disconnect you."}
+      </p>
+      <div className="flex flex-col gap-3">
+        <button
+          onClick={onCancel}
+          className="bg-slate-700 hover:bg-slate-600 text-white py-3 rounded font-bold transition-colors"
+        >
+          Stay (Cancel)
+        </button>
+
+        {inGame && isHost && (
+          <button
+            onClick={onConfirmLobby}
+            className="py-3 rounded font-bold transition-colors flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-500 text-white"
+          >
+            <Home size={18} /> Return Traders to Lobby
+          </button>
+        )}
+
+        <button
+          onClick={onConfirmLeave}
+          className="bg-red-600 hover:bg-red-500 text-white py-3 rounded font-bold transition-colors flex items-center justify-center gap-2"
+        >
+          <LogOut size={18} /> Leave Market
+        </button>
       </div>
-      <button
-        onClick={onClose}
-        className="w-full mt-6 bg-orange-600 hover:bg-orange-500 text-white font-bold py-3 rounded-xl shadow-lg transform transition active:scale-95"
-      >
-        Got it!
-      </button>
     </div>
   </div>
 );
 
-const WinnerModal = ({ winnerName, isMe, onRestart, isHost }) => (
-  <div className="fixed inset-0 bg-black/80 z-[100] flex items-center justify-center p-4 animate-in fade-in duration-500">
-    <div className="bg-white rounded-3xl p-8 max-w-md w-full text-center relative overflow-hidden shadow-2xl">
-      <div className="absolute inset-0 bg-gradient-to-b from-yellow-200/50 to-transparent pointer-events-none"></div>
-      <Crown className="w-24 h-24 mx-auto text-yellow-500 mb-4 animate-bounce" />
-      <h2 className="text-4xl font-black text-gray-800 mb-2">
-        {isMe ? "YOU WON!" : `${winnerName} WINS!`}
-      </h2>
-      <p className="text-gray-600 mb-8 text-lg">Collected 5 matching fruits!</p>
+const MarketButton = ({
+  children,
+  onClick,
+  disabled,
+  variant = "primary",
+  className = "",
+  icon: Icon,
+}) => {
+  const baseStyles =
+    "relative px-6 py-3 rounded-lg font-serif font-bold transition-all transform active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg flex items-center justify-center gap-2 text-base md:text-lg";
+  const variants = {
+    primary:
+      "bg-orange-600 hover:bg-orange-500 text-white border-2 border-orange-800 shadow-orange-900/30",
+    danger: "bg-red-700 hover:bg-red-600 text-white border-2 border-red-900",
+    secondary:
+      "bg-slate-700 hover:bg-slate-600 text-slate-200 border-2 border-slate-600",
+    success:
+      "bg-emerald-700 hover:bg-emerald-600 text-white border-2 border-emerald-900",
+    ghost:
+      "bg-transparent hover:bg-white/10 text-slate-300 border border-transparent",
+  };
+  return (
+    <button
+      onClick={onClick}
+      disabled={disabled}
+      className={`${baseStyles} ${variants[variant]} ${className}`}
+    >
+      {Icon && <Icon size={18} />}
+      {children}
+    </button>
+  );
+};
 
-      {isHost ? (
-        <button
-          onClick={onRestart}
-          className="w-full bg-green-600 hover:bg-green-500 text-white font-bold py-4 rounded-xl shadow-lg flex items-center justify-center gap-2 transform transition hover:scale-105"
-        >
-          <Play fill="currentColor" /> Play Again
-        </button>
-      ) : (
-        <div className="text-gray-400 italic animate-pulse">
-          Waiting for host to restart...
+const CardDisplay = ({
+  type,
+  onClick,
+  disabled,
+  highlight,
+  small,
+  tiny,
+  isFaceDown = false,
+  isOpponent = false,
+}) => {
+  if (isFaceDown) {
+    return (
+      <div
+        className={`
+        ${
+          tiny
+            ? "w-6 h-8 rounded-sm"
+            : small
+            ? "w-10 h-14 rounded"
+            : "w-20 h-32 md:w-24 md:h-36 rounded-xl"
+        } 
+        bg-gray-800 border-2 border-gray-600 flex items-center justify-center shadow-lg transition-transform
+        ${isOpponent ? "" : "hover:border-gray-400"}
+      `}
+      >
+        <div className="w-full h-full bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-gray-700 to-gray-900 opacity-50 flex items-center justify-center">
+          <ShoppingBag
+            className="text-gray-500 opacity-50"
+            size={small ? 16 : 24}
+          />
+        </div>
+      </div>
+    );
+  }
+
+  const fruit = FRUITS[type];
+  if (!fruit) return null;
+  if (tiny) {
+    return (
+      <div
+        className={`w-6 h-8 ${fruit.bg} border ${fruit.border} rounded-sm flex items-center justify-center shadow-sm`}
+      >
+        <fruit.icon className={`${fruit.color} w-3 h-3`} />
+      </div>
+    );
+  }
+
+  return (
+    <button
+      onClick={onClick}
+      disabled={disabled}
+      className={`
+        relative rounded-xl border-2 transition-all flex flex-col items-center justify-between shadow-lg
+        ${small ? "w-10 h-14 p-1" : "w-20 h-32 md:w-28 md:h-40 p-2"}
+        ${
+          highlight
+            ? "ring-4 ring-orange-500 -translate-y-6 z-50 shadow-[0_0_25px_rgba(249,115,22,0.5)]"
+            : "border-gray-600"
+        }
+        ${fruit.bg} ${fruit.border}
+        ${
+          disabled
+            ? "cursor-not-allowed brightness-75"
+            : "hover:scale-105 cursor-pointer hover:border-white hover:-translate-y-2 hover:z-40"
+        }
+      `}
+    >
+      <div
+        className={`absolute top-1 left-1.5 text-[10px] md:text-sm font-bold ${fruit.color} leading-none`}
+      >
+        {fruit.value}
+      </div>
+
+      <div
+        className={`absolute bottom-1 right-1.5 text-[10px] md:text-sm font-bold ${fruit.color} leading-none rotate-180`}
+      >
+        {fruit.value}
+      </div>
+
+      <div className="flex-1 flex items-center justify-center w-full">
+        <fruit.icon
+          className={`${fruit.color} ${
+            small ? "w-4 h-4" : "w-10 h-10 md:w-14 md:h-14"
+          } drop-shadow-lg`}
+        />
+      </div>
+
+      {!small && (
+        <div className="w-full text-center pb-1">
+          <div
+            className={`font-bold text-[9px] md:text-xs ${fruit.color} tracking-wide uppercase truncate`}
+          >
+            {fruit.name}
+          </div>
         </div>
       )}
+    </button>
+  );
+};
+
+const GameGuideModal = ({ onClose }) => (
+  <div className="fixed inset-0 bg-black/95 z-[100] flex items-center justify-center p-0 md:p-4 backdrop-blur-md animate-in fade-in">
+    <div className="bg-[#1e293b] md:rounded-2xl w-full max-w-5xl h-full md:h-[90vh] overflow-hidden border-none md:border-2 border-orange-500 shadow-2xl flex flex-col relative">
+      <div className="p-4 md:p-6 border-b border-orange-500/30 flex justify-between items-center bg-black/40">
+        <div className="flex flex-col">
+          <h2 className="text-2xl md:text-4xl font-serif font-black text-orange-500 uppercase tracking-widest drop-shadow-md">
+            Market Rules
+          </h2>
+          <span className="text-slate-400 text-xs md:text-sm font-medium tracking-wide font-serif italic">
+            Trade, Collect, & Conquer
+          </span>
+        </div>
+        <button
+          onClick={onClose}
+          className="p-2 hover:bg-white/10 rounded-full text-orange-500 transition-colors"
+        >
+          <X size={28} />
+        </button>
+      </div>
+
+      <div className="flex-1 overflow-y-auto p-4 md:p-8 space-y-8 text-slate-300 scrollbar-thin scrollbar-thumb-orange-500 scrollbar-track-transparent">
+        <div className="bg-[#0f172a] p-6 rounded-xl border border-slate-700 shadow-inner">
+          <h3 className="text-xl md:text-2xl font-bold text-[#f1f5f9] mb-4 flex items-center gap-3 font-serif">
+            <Trophy className="text-orange-500" size={24} /> The Objective
+          </h3>
+          <p className="text-sm md:text-lg leading-relaxed text-slate-400">
+            You must corner the market! The first player to collect{" "}
+            <strong className="text-white">5 cards of the same fruit</strong>{" "}
+            wins the game instantly.
+          </p>
+        </div>
+
+        <div>
+          <h3 className="text-xl md:text-2xl font-bold text-[#f1f5f9] mb-6 flex items-center gap-3 font-serif">
+            <ArrowRight className="text-emerald-400" size={24} /> How to Play
+          </h3>
+          <ul className="space-y-4 text-slate-300 text-lg">
+            <li className="flex items-start gap-3">
+              <div className="bg-orange-500 text-black w-8 h-8 rounded-full flex items-center justify-center font-bold shrink-0 mt-1">
+                1
+              </div>
+              <div>Everyone starts with a hand of 5 random fruit cards.</div>
+            </li>
+            <li className="flex items-start gap-3">
+              <div className="bg-orange-500 text-black w-8 h-8 rounded-full flex items-center justify-center font-bold shrink-0 mt-1">
+                2
+              </div>
+              <div>
+                On your turn, select <strong>ONE card</strong> to pass to the
+                player on your left.
+              </div>
+            </li>
+            <li className="flex items-start gap-3">
+              <div className="bg-orange-500 text-black w-8 h-8 rounded-full flex items-center justify-center font-bold shrink-0 mt-1">
+                3
+              </div>
+              <div>
+                The game continues in a circle until someone has a full set of 5
+                matching fruits!
+              </div>
+            </li>
+          </ul>
+        </div>
+      </div>
+      <div className="p-6 bg-black/40 border-t border-orange-500/30 text-center">
+        <MarketButton
+          onClick={onClose}
+          className="w-full md:w-auto px-12 text-lg"
+        >
+          Enter Market
+        </MarketButton>
+      </div>
+    </div>
+  </div>
+);
+
+const WinnerModal = ({
+  winnerName,
+  isMe,
+  onRestart,
+  isHost,
+  onReturnToLobby,
+}) => (
+  <div className="fixed inset-0 bg-black/90 z-[100] flex items-center justify-center p-4 animate-in fade-in duration-500 backdrop-blur-sm">
+    <div className="bg-[#1e293b] rounded-xl p-8 max-w-md w-full text-center relative overflow-hidden shadow-2xl border-2 border-orange-500">
+      <div className="absolute inset-0 bg-gradient-to-b from-orange-900/20 to-black opacity-50"></div>
+      <Crown className="w-24 h-24 mx-auto text-orange-500 mb-4 animate-bounce drop-shadow-[0_0_15px_rgba(249,115,22,0.5)]" />
+      <h2 className="text-4xl font-serif font-black text-white mb-2 tracking-wide">
+        {isMe ? "YOU WON!" : `${winnerName} WINS!`}
+      </h2>
+      <p className="text-slate-300 mb-8 text-lg">
+        Cornered the market with 5 matching fruits!
+      </p>
+
+      {isHost ? (
+        <div className="flex flex-col gap-3 relative z-10">
+          <MarketButton
+            onClick={onRestart}
+            variant="success"
+            className="w-full text-lg"
+          >
+            <Play fill="currentColor" size={20} /> Play Again
+          </MarketButton>
+          <button
+            onClick={onReturnToLobby}
+            className="w-full py-3 rounded-lg font-bold transition-all bg-slate-700 hover:bg-slate-600 text-white flex items-center justify-center gap-2"
+          >
+            <Home size={20} /> Return to Lobby
+          </button>
+        </div>
+      ) : (
+        <div className="text-slate-500 italic animate-pulse font-serif">
+          Waiting for the Market Master to restart...
+        </div>
+      )}
+    </div>
+  </div>
+);
+
+const LogViewer = ({ logs, onClose }) => (
+  <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4 backdrop-blur-sm">
+    <div className="bg-[#1e293b] w-full md:max-w-md h-[60vh] rounded-xl flex flex-col border border-orange-500 shadow-2xl overflow-hidden">
+      <div className="p-4 border-b border-orange-500/30 flex justify-between items-center bg-black/20">
+        <h3 className="text-orange-500 font-serif font-bold text-xl flex items-center gap-2">
+          <History size={20} /> Market Ledger
+        </h3>
+        <button
+          onClick={onClose}
+          className="p-1.5 hover:bg-white/10 rounded-full transition-colors text-slate-400"
+        >
+          <X size={20} />
+        </button>
+      </div>
+      <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-[#0f172a]">
+        {[...logs].reverse().map((log, i) => (
+          <div
+            key={i}
+            className={`text-xs md:text-sm p-3 rounded-lg border-l-4 shadow-sm ${
+              log.type === "win"
+                ? "bg-yellow-900/20 border-yellow-500 text-yellow-200"
+                : log.type === "action"
+                ? "bg-slate-800 border-slate-500 text-slate-300"
+                : "bg-slate-800 border-slate-600 text-slate-400"
+            }`}
+          >
+            {log.text}
+          </div>
+        ))}
+      </div>
     </div>
   </div>
 );
@@ -288,6 +536,8 @@ export default function FruitSellerGame() {
   const [error, setError] = useState("");
   const [selectedCardIndex, setSelectedCardIndex] = useState(null);
   const [showRules, setShowRules] = useState(false);
+  const [showLogs, setShowLogs] = useState(false);
+  const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
 
   // --- Auth & Listener ---
   useEffect(() => {
@@ -302,7 +552,6 @@ export default function FruitSellerGame() {
     const unsubscribe = onAuthStateChanged(auth, (u) => setUser(u));
     return () => unsubscribe();
   }, []);
-
   useEffect(() => {
     if (!roomId || !user) return;
     const roomRef = doc(
@@ -317,6 +566,15 @@ export default function FruitSellerGame() {
     const unsubscribe = onSnapshot(roomRef, (snap) => {
       if (snap.exists()) {
         const data = snap.data();
+
+        const isInRoom = data.players.some((p) => p.id === user.uid);
+        if (!isInRoom) {
+          setRoomId(null);
+          setView("menu");
+          setError("The Market has closed or you were removed.");
+          return;
+        }
+
         setGameState(data);
         if (data.status === "playing" || data.status === "finished")
           setView("game");
@@ -324,22 +582,18 @@ export default function FruitSellerGame() {
       } else {
         setRoomId(null);
         setView("menu");
-        setError("Room closed.");
+        setError("Market closed by the Master.");
       }
     });
     return () => unsubscribe();
   }, [roomId, user]);
-
   // --- Bot Turn Logic (Host Only) ---
   useEffect(() => {
     if (!gameState || gameState.status !== "playing" || !user) return;
-
-    // Only the host runs bot logic to prevent race conditions
     if (gameState.hostId !== user.uid) return;
 
     const currentPlayer = gameState.players[gameState.turnIndex];
     if (currentPlayer.isBot) {
-      // Small delay to simulate thinking/pacing
       const timer = setTimeout(() => {
         const cardIndexToPass = getBotMove(currentPlayer.hand);
         performPass(cardIndexToPass);
@@ -347,12 +601,10 @@ export default function FruitSellerGame() {
       return () => clearTimeout(timer);
     }
   }, [gameState, user]);
-
   // --- Actions ---
   const createRoom = async () => {
     if (!playerName.trim()) return setError("Please enter your name.");
     const newRoomId = Math.random().toString(36).substring(2, 6).toUpperCase();
-
     await setDoc(
       doc(db, "artifacts", APP_ID, "public", "data", "rooms", newRoomId),
       {
@@ -388,14 +640,12 @@ export default function FruitSellerGame() {
       "rooms",
       rId
     );
-
     try {
       const snap = await getDoc(roomRef);
       if (!snap.exists()) return setError("Room not found.");
       const data = snap.data();
       if (data.status !== "lobby") return setError("Game already started.");
       if (data.players.length >= data.maxPlayers) return setError("Room full.");
-
       const existing = data.players.find((p) => p.id === user.uid);
       if (!existing) {
         await updateDoc(roomRef, {
@@ -417,11 +667,8 @@ export default function FruitSellerGame() {
 
   const startGame = async () => {
     if (!gameState) return;
-
     let currentPlayers = [...gameState.players];
     const maxP = gameState.maxPlayers;
-
-    // Fill with bots if needed
     if (currentPlayers.length < maxP) {
       const botsNeeded = maxP - currentPlayers.length;
       for (let i = 0; i < botsNeeded; i++) {
@@ -434,16 +681,12 @@ export default function FruitSellerGame() {
         });
       }
     }
-
     const numPlayers = currentPlayers.length;
     const deck = generateDeck(numPlayers);
-
-    // Deal cards
     currentPlayers = currentPlayers.map((p) => ({
       ...p,
-      hand: deck.splice(0, 5), // Deal 5 cards
+      hand: deck.splice(0, 5),
     }));
-
     await updateDoc(
       doc(db, "artifacts", APP_ID, "public", "data", "rooms", roomId),
       {
@@ -451,20 +694,16 @@ export default function FruitSellerGame() {
         players: currentPlayers,
         turnIndex: 0,
         winnerId: null,
-        logs: [{ text: "Game Started!", type: "neutral" }],
+        logs: [{ text: "Market Opened!", type: "neutral" }],
       }
     );
   };
 
-  // Centralized Pass Logic
   const performPass = async (cardIndex) => {
     if (!gameState) return;
-
     const currentPlayerIdx = gameState.turnIndex;
     const nextPlayerIdx = (currentPlayerIdx + 1) % gameState.players.length;
-
     const updatedPlayers = JSON.parse(JSON.stringify(gameState.players));
-
     // Move card
     if (updatedPlayers[currentPlayerIdx].hand[cardIndex]) {
       const passedCard = updatedPlayers[currentPlayerIdx].hand.splice(
@@ -473,7 +712,6 @@ export default function FruitSellerGame() {
       )[0];
       updatedPlayers[nextPlayerIdx].hand.push(passedCard);
     } else {
-      // Fallback for safety
       const passedCard = updatedPlayers[currentPlayerIdx].hand.pop();
       if (passedCard) updatedPlayers[nextPlayerIdx].hand.push(passedCard);
     }
@@ -481,7 +719,6 @@ export default function FruitSellerGame() {
     // Check Winner
     let winnerId = null;
     let winnerName = null;
-
     updatedPlayers.forEach((p) => {
       const counts = {};
       p.hand.forEach((c) => {
@@ -495,28 +732,21 @@ export default function FruitSellerGame() {
       });
     });
 
-    const updates = {
-      players: updatedPlayers,
-      selectedCardIndex: null,
-    };
-
+    const updates = { players: updatedPlayers, selectedCardIndex: null };
     const currentName = updatedPlayers[currentPlayerIdx].name;
     const nextName = updatedPlayers[nextPlayerIdx].name;
     const logs = [
       ...gameState.logs,
       { text: `${currentName} passed to ${nextName}.`, type: "action" },
     ];
-
     if (winnerId) {
       updates.status = "finished";
       updates.winnerId = winnerId;
-      logs.push({ text: `${winnerName} WINS!`, type: "win" });
+      logs.push({ text: `${winnerName} CORNERED THE MARKET!`, type: "win" });
     } else {
       updates.turnIndex = nextPlayerIdx;
     }
-
-    updates.logs = logs.slice(-5);
-
+    updates.logs = logs.slice(-10);
     await updateDoc(
       doc(db, "artifacts", APP_ID, "public", "data", "rooms", roomId),
       updates
@@ -525,32 +755,82 @@ export default function FruitSellerGame() {
   };
 
   const handleManualPass = () => {
-    if (selectedCardIndex !== null) {
-      performPass(selectedCardIndex);
-    }
+    if (selectedCardIndex !== null) performPass(selectedCardIndex);
   };
-
   const leaveRoom = async () => {
     if (!roomId || !user) return;
     try {
-      const newPlayers = gameState.players.filter((p) => p.id !== user.uid);
-      if (newPlayers.length === 0) {
-        // empty logic
-      } else {
-        await updateDoc(
-          doc(db, "artifacts", APP_ID, "public", "data", "rooms", roomId),
-          {
-            players: newPlayers,
+      const roomRef = doc(
+        db,
+        "artifacts",
+        APP_ID,
+        "public",
+        "data",
+        "rooms",
+        roomId
+      );
+      const snap = await getDoc(roomRef);
+
+      if (snap.exists()) {
+        const data = snap.data();
+        const isHost = data.hostId === user.uid;
+
+        if (isHost) {
+          if (data.status === "lobby") {
+            await deleteDoc(roomRef);
+            // Destroy room
+          } else {
+            await handleGameAbandon(roomRef, data);
           }
-        );
+        } else {
+          // Guest Logic
+          if (data.status === "lobby") {
+            const newPlayers = data.players.filter((p) => p.id !== user.uid);
+            await updateDoc(roomRef, { players: newPlayers });
+          } else {
+            await handleGameAbandon(roomRef, data);
+          }
+        }
       }
     } catch (err) {
       console.error(err);
     }
     setRoomId(null);
     setView("menu");
+    setShowLeaveConfirm(false);
   };
 
+  const handleGameAbandon = async (roomRef, data) => {
+    await updateDoc(roomRef, {
+      status: "finished",
+      players: data.players.filter((p) => p.id !== user.uid), // Remove the leaver
+      logs: arrayUnion({
+        text: `${
+          data.players.find((p) => p.id === user.uid)?.name
+        } left the market. Market Closed.`,
+        type: "win",
+      }),
+    });
+  };
+
+  const resetToLobby = async () => {
+    if (!gameState || gameState.hostId !== user.uid) return;
+    await updateDoc(
+      doc(db, "artifacts", APP_ID, "public", "data", "rooms", roomId),
+      {
+        status: "lobby",
+        turnIndex: 0,
+        winnerId: null,
+        logs: [],
+        players: gameState.players.map((p) => ({
+          ...p,
+          hand: [],
+          ready: true,
+        })),
+      }
+    );
+    setShowLeaveConfirm(false);
+  };
   const myPlayerIndex = gameState?.players.findIndex((p) => p.id === user?.uid);
   const me = myPlayerIndex >= 0 ? gameState.players[myPlayerIndex] : null;
   const isMyTurn = gameState?.turnIndex === myPlayerIndex;
@@ -565,233 +845,255 @@ export default function FruitSellerGame() {
     }
     return opponents;
   };
-
   if (!user)
     return (
-      <div className="min-h-screen bg-orange-50 flex items-center justify-center font-bold text-orange-800">
-        Loading Fruit Market...
+      <div className="min-h-screen bg-slate-900 flex items-center justify-center text-orange-500 font-serif animate-pulse">
+        Scanning the Market...
       </div>
     );
-
+  // --- VIEW: MENU ---
   if (view === "menu") {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-orange-100 to-yellow-200 p-4 flex flex-col items-center justify-center font-sans">
-        {showRules && <RulesModal onClose={() => setShowRules(false)} />}
+      <div className="min-h-screen bg-gray-950 text-white flex flex-col relative overflow-hidden font-sans selection:bg-orange-500 selection:text-black">
+        {showRules && <GameGuideModal onClose={() => setShowRules(false)} />}
+        <FloatingBackground />
 
-        <div className="w-full max-w-md bg-white rounded-3xl shadow-2xl overflow-hidden border-4 border-orange-200">
-          <div className="bg-orange-500 p-8 text-center relative overflow-hidden">
-            <div className="absolute -top-10 -left-10 text-orange-400 opacity-20">
-              <Citrus size={120} />
-            </div>
-            <div className="absolute top-10 -right-10 text-yellow-300 opacity-20">
-              <Banana size={120} />
-            </div>
-            <h1 className="text-4xl font-black text-white tracking-tight relative z-10 drop-shadow-md">
+        {/* Vertical Centering Fix: 
+            Instead of using justify-center on the main container which fights with mt-auto,
+            we use a flex-1 wrapper that takes up all available space and centers its content 
+            within that space.
+        */}
+        <div className="flex-1 flex flex-col items-center justify-center w-full z-10 px-4">
+          {/* Header Section with Blooming Effect */}
+          <div className="text-center mb-10 animate-in fade-in zoom-in duration-700 w-full">
+            <Apple
+              size={64}
+              className="text-orange-500 mx-auto mb-4 animate-bounce drop-shadow-[0_0_15px_rgba(249,115,22,0.5)]"
+            />
+            <h1 className="text-5xl md:text-7xl font-black text-transparent bg-clip-text bg-gradient-to-b from-orange-300 to-orange-600 font-serif tracking-widest drop-shadow-md">
               FRUIT SELLER
             </h1>
-            <p className="text-orange-100 font-medium relative z-10 mt-2">
-              The juicy trading card game
+            <p className="text-gray-400 tracking-[0.3em] uppercase mt-2">
+              The Juicy Trading Game
             </p>
           </div>
 
-          <div className="p-8 space-y-6">
+          {/* Input/Menu Section with Slide Effect */}
+          <div className="bg-gray-900/80 backdrop-blur border border-gray-700 p-8 rounded-2xl w-full max-w-md shadow-2xl animate-in slide-in-from-bottom-10 duration-700 delay-100">
             {error && (
-              <div className="bg-red-100 text-red-600 p-3 rounded-lg text-sm text-center font-bold">
-                {error}
+              <div className="bg-red-900/50 text-red-200 p-2 mb-4 rounded text-center text-sm border border-red-800 flex items-center justify-center gap-2">
+                <AlertTriangle size={16} /> {error}
               </div>
             )}
 
-            <div>
-              <label className="block text-gray-500 text-xs font-bold uppercase mb-2 ml-1">
-                Your Nickname
-              </label>
+            <input
+              className="w-full bg-black/50 border border-gray-600 p-3 rounded mb-4 text-white placeholder-gray-500 focus:border-orange-500 outline-none transition-colors"
+              placeholder="Trader Name"
+              value={playerName}
+              onChange={(e) => setPlayerName(e.target.value)}
+            />
+
+            <button
+              onClick={createRoom}
+              className="w-full bg-gradient-to-r from-orange-700 to-orange-600 hover:from-orange-600 hover:to-orange-500 p-4 rounded font-bold mb-4 flex items-center justify-center gap-2 border border-orange-500/30 shadow-[0_0_15px_rgba(249,115,22,0.2)] transition-all"
+            >
+              <Store size={20} /> Open New Stall
+            </button>
+
+            <div className="flex flex-col sm:flex-row gap-2 mb-4">
               <input
-                type="text"
-                placeholder="e.g. Juicy Joe"
-                className="w-full bg-gray-50 border-2 border-gray-200 rounded-xl p-4 text-gray-800 font-bold focus:outline-none focus:border-orange-400 transition"
-                value={playerName}
-                onChange={(e) => setPlayerName(e.target.value)}
+                className="w-full sm:flex-1 bg-black/50 border border-gray-600 p-3 rounded text-white placeholder-gray-500 uppercase font-mono tracking-wider focus:border-orange-500 outline-none"
+                placeholder="ROOM CODE"
+                value={roomCodeInput}
+                onChange={(e) => setRoomCodeInput(e.target.value.toUpperCase())}
               />
-            </div>
-
-            <div className="flex flex-col gap-3">
               <button
-                onClick={createRoom}
-                className="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold py-4 rounded-xl shadow-lg shadow-orange-500/30 transition transform hover:-translate-y-1"
+                onClick={joinRoom}
+                className="w-full sm:w-auto bg-gray-800 hover:bg-gray-700 border border-gray-600 px-6 py-3 rounded font-bold transition-colors"
               >
-                Create New Market
+                Join
               </button>
-
-              <div className="relative">
-                <div className="absolute inset-0 flex items-center">
-                  <div className="w-full border-t border-gray-200"></div>
-                </div>
-                <div className="relative flex justify-center text-sm">
-                  <span className="px-2 bg-white text-gray-400 font-bold">
-                    OR
-                  </span>
-                </div>
-              </div>
-
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  placeholder="ROOM CODE"
-                  className="flex-1 bg-gray-50 border-2 border-gray-200 rounded-xl p-4 text-gray-800 font-bold uppercase focus:outline-none focus:border-blue-400 transition"
-                  value={roomCodeInput}
-                  onChange={(e) => setRoomCodeInput(e.target.value)}
-                />
-                <button
-                  onClick={joinRoom}
-                  className="bg-blue-500 hover:bg-blue-600 text-white font-bold px-6 rounded-xl shadow-lg shadow-blue-500/30 transition transform hover:-translate-y-1"
-                >
-                  Join
-                </button>
-              </div>
             </div>
 
             <button
               onClick={() => setShowRules(true)}
-              className="w-full text-gray-400 hover:text-gray-600 text-sm font-bold flex items-center justify-center gap-1"
+              className="w-full text-sm text-gray-400 hover:text-white flex items-center justify-center gap-2 py-2"
             >
-              <Info size={16} /> How to Play
+              <BookOpen size={16} /> How to Play
             </button>
           </div>
+        </div>
+
+        {/* Footer stays at bottom because the wrapper above is flex-1 */}
+        <div className="z-10 w-full bg-transparent">
+          <FruitSellerLogo />
         </div>
       </div>
     );
   }
 
+  // --- VIEW: LOBBY ---
   if (view === "lobby" && gameState) {
     const isHost = gameState.hostId === user.uid;
     const missingPlayers = gameState.maxPlayers - gameState.players.length;
 
     return (
-      <div className="min-h-screen bg-orange-50 p-6 flex flex-col items-center">
-        <div className="w-full max-w-2xl bg-white rounded-3xl shadow-xl overflow-hidden border border-orange-100 flex-1 flex flex-col">
-          <div className="bg-orange-600 p-6 flex justify-between items-center text-white">
-            <div>
-              <h2 className="text-2xl font-black">Lobby</h2>
-              <p className="text-orange-200 text-sm font-mono tracking-widest">
-                CODE: {roomId}
-              </p>
+      <div className="min-h-screen bg-gray-900 text-white flex flex-col items-center justify-center p-6 relative">
+        <FloatingBackground />
+
+        {showRules && <GameGuideModal onClose={() => setShowRules(false)} />}
+        {showLeaveConfirm && (
+          <LeaveConfirmModal
+            onCancel={() => setShowLeaveConfirm(false)}
+            onConfirmLeave={leaveRoom}
+            onConfirmLobby={() => {
+              resetToLobby();
+              setShowLeaveConfirm(false);
+            }}
+            isHost={isHost}
+            inGame={false}
+          />
+        )}
+
+        <div className="z-10 w-full max-w-lg bg-gray-800/90 p-8 rounded-2xl border border-gray-700 shadow-2xl mb-4">
+          <div className="flex justify-between items-center mb-8 border-b border-gray-700 pb-4">
+            <h2 className="text-2xl font-serif text-orange-500">
+              Market: {roomId}
+            </h2>
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2 text-sm text-gray-400">
+                <Users size={16} /> {gameState.players.length}/
+                {gameState.maxPlayers}
+              </div>
+              <button
+                onClick={() => setShowLeaveConfirm(true)}
+                className="p-2 bg-red-900/50 hover:bg-red-900 rounded text-red-300"
+                title="Leave Room"
+              >
+                <LogOut size={16} />
+              </button>
             </div>
-            <button
-              onClick={leaveRoom}
-              className="p-2 bg-orange-700/50 rounded-lg hover:bg-orange-700 transition"
-            >
-              <LogOut size={20} />
-            </button>
           </div>
 
-          <div className="p-6 flex-1">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="font-bold text-gray-600 flex items-center gap-2">
-                <Users size={20} /> Players ({gameState.players.length}/
-                {gameState.maxPlayers})
-              </h3>
-              {isHost && (
-                <div className="flex items-center gap-4">
-                  <span className="text-sm text-gray-400 font-bold">
-                    Max Players:
-                  </span>
-                  <select
-                    className="bg-gray-100 border rounded p-1 font-bold text-gray-700"
-                    value={gameState.maxPlayers}
-                    onChange={(e) =>
-                      updateDoc(
-                        doc(
-                          db,
-                          "artifacts",
-                          APP_ID,
-                          "public",
-                          "data",
-                          "rooms",
-                          roomId
-                        ),
-                        { maxPlayers: parseInt(e.target.value) }
-                      )
-                    }
-                  >
-                    <option value={4}>4</option>
-                    <option value={5}>5</option>
-                    <option value={6}>6</option>
-                  </select>
-                </div>
-              )}
-            </div>
-
-            <div className="space-y-3 mb-8">
-              {gameState.players.map((p) => (
-                <div
-                  key={p.id}
-                  className="flex items-center justify-between p-4 bg-gray-50 rounded-xl border border-gray-100"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-gradient-to-br from-orange-400 to-red-500 rounded-full flex items-center justify-center text-white font-bold">
-                      {p.name[0].toUpperCase()}
-                    </div>
-                    <span className="font-bold text-gray-800">
-                      {p.name} {p.id === user.uid && "(You)"}
-                    </span>
-                  </div>
+          <div className="space-y-3 mb-8">
+            {gameState.players.map((p) => (
+              <div
+                key={p.id}
+                className="flex items-center justify-between bg-gray-900 p-4 rounded border border-gray-700"
+              >
+                <span className="font-bold text-orange-500 flex items-center gap-2">
                   {p.id === gameState.hostId && (
-                    <Crown size={20} className="text-yellow-500" />
-                  )}
+                    <Crown size={14} className="text-orange-500" />
+                  )}{" "}
+                  {p.name}
+                </span>
+                {p.id === user.uid && (
+                  <span className="text-xs bg-gray-700 px-2 py-1 rounded">
+                    You
+                  </span>
+                )}
+              </div>
+            ))}
+            {Array(missingPlayers)
+              .fill(0)
+              .map((_, i) => (
+                <div
+                  key={i}
+                  className="p-4 border border-dashed border-gray-700 rounded bg-gray-900/50 flex items-center gap-2 text-gray-500"
+                >
+                  <Bot size={16} />
+                  <span className="italic text-sm">
+                    Automated Trader will join...
+                  </span>
                 </div>
               ))}
+          </div>
 
-              {/* Preview Bots that will be added */}
-              {Array(missingPlayers)
-                .fill(0)
-                .map((_, i) => (
-                  <div
-                    key={i}
-                    className="p-4 border-2 border-dashed border-gray-200 rounded-xl flex items-center justify-start gap-3 text-gray-400"
-                  >
-                    <Bot size={20} />
-                    <span className="font-bold">
-                      Bot {i + 1} will join automatically...
-                    </span>
-                  </div>
-                ))}
+          {isHost && (
+            <div className="flex justify-end items-center mb-4">
+              <span className="text-sm text-gray-400 mr-2">Max Players:</span>
+              <select
+                className="bg-gray-700 border border-gray-600 rounded p-1 text-white font-bold outline-none text-sm"
+                value={gameState.maxPlayers}
+                onChange={(e) =>
+                  updateDoc(
+                    doc(
+                      db,
+                      "artifacts",
+                      APP_ID,
+                      "public",
+                      "data",
+                      "rooms",
+                      roomId
+                    ),
+                    { maxPlayers: parseInt(e.target.value) }
+                  )
+                }
+              >
+                <option value={4}>4</option>
+                <option value={5}>5</option>
+                <option value={6}>6</option>
+              </select>
             </div>
+          )}
 
+          <div className="flex flex-col gap-3">
             {isHost ? (
               <button
                 onClick={startGame}
-                className={`w-full py-4 rounded-xl font-black text-xl shadow-lg transition transform bg-green-500 hover:bg-green-600 text-white hover:scale-105`}
+                className="w-full py-4 rounded-xl font-bold text-lg shadow-lg transition-all bg-emerald-700 hover:bg-emerald-600 text-white shadow-emerald-900/30"
               >
-                START GAME {missingPlayers > 0 && "(+ Bots)"}
+                Open Market {missingPlayers > 0 && "(+ Bots)"}
               </button>
             ) : (
-              <div className="text-center text-gray-400 font-bold animate-pulse">
-                Waiting for host to start...
+              <div className="text-center text-orange-500/80 font-serif mb-2">
+                Waiting for Host to start...
               </div>
             )}
+            <button
+              onClick={() => setShowRules(true)}
+              className="text-sm text-gray-400 hover:text-white flex items-center justify-center gap-2"
+            >
+              <BookOpen size={16} /> Game Rules
+            </button>
           </div>
         </div>
+
+        <FruitSellerLogo />
       </div>
     );
   }
 
+  // --- VIEW: GAME ---
   if (view === "game" && me) {
     const opponents = getOpponents();
-
-    // Sort hand by type for easier viewing
     const sortedHandIndices = me.hand
       .map((c, i) => ({ ...c, originalIndex: i }))
       .sort((a, b) => a.type.localeCompare(b.type));
+    const isHost = gameState.hostId === user.uid;
 
     return (
-      <div className="min-h-screen bg-green-900/90 relative flex flex-col overflow-hidden select-none">
-        <div
-          className="absolute inset-0 opacity-10 pointer-events-none"
-          style={{
-            backgroundImage: "radial-gradient(#ffffff 2px, transparent 2px)",
-            backgroundSize: "30px 30px",
-          }}
-        ></div>
+      <div className="min-h-screen bg-slate-900 text-white flex flex-col relative overflow-hidden select-none">
+        <FloatingBackground />
+
+        {/* Global Modals */}
+        {showRules && <GameGuideModal onClose={() => setShowRules(false)} />}
+        {showLogs && (
+          <LogViewer logs={gameState.logs} onClose={() => setShowLogs(false)} />
+        )}
+
+        {showLeaveConfirm && (
+          <LeaveConfirmModal
+            onCancel={() => setShowLeaveConfirm(false)}
+            onConfirmLeave={leaveRoom}
+            onConfirmLobby={() => {
+              resetToLobby();
+              setShowLeaveConfirm(false);
+            }}
+            isHost={isHost}
+            inGame={true}
+          />
+        )}
 
         {gameState.winnerId && (
           <WinnerModal
@@ -801,165 +1103,185 @@ export default function FruitSellerGame() {
             isMe={gameState.winnerId === user.uid}
             isHost={gameState.hostId === user.uid}
             onRestart={startGame}
+            onReturnToLobby={resetToLobby}
           />
         )}
 
-        {/* Header */}
-        <div className="relative z-10 bg-black/20 p-2 flex justify-between items-center text-white backdrop-blur-md">
-          <div className="font-bold flex items-center gap-2">
-            <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse"></div>
-            Room: {roomId}
+        {/* Top Bar - Fixed at Top */}
+        <div className="fixed top-0 left-0 right-0 bg-[#1e293b] p-2 md:p-4 flex justify-between items-center z-50 shadow-md border-b border-orange-500/30 h-14 md:h-16">
+          <div className="font-bold text-orange-500 flex items-center gap-2 text-sm md:text-base font-serif truncate">
+            <Store size={18} /> Market: {roomId}
           </div>
-          <div className="flex gap-4">
-            <button onClick={() => setShowRules(true)}>
-              <Info size={20} className="hover:text-orange-300" />
+          <div className="flex gap-2">
+            <button
+              onClick={() => setShowLogs(true)}
+              className="p-2 hover:bg-white/10 rounded transition-colors text-slate-300"
+            >
+              <History size={20} />
             </button>
-            <button onClick={leaveRoom}>
-              <LogOut size={20} className="hover:text-red-300" />
+            <button
+              onClick={() => setShowRules(true)}
+              className="p-2 hover:bg-white/10 rounded transition-colors text-slate-300"
+            >
+              <BookOpen size={20} />
+            </button>
+            <button
+              onClick={() => setShowLeaveConfirm(true)}
+              className="p-2 hover:bg-white/10 rounded transition-colors text-slate-300"
+            >
+              <LogOut size={20} />
             </button>
           </div>
         </div>
 
-        {/* Game Area */}
-        <div className="flex-1 relative p-4 flex flex-col justify-between">
-          {/* Opponents Top Row */}
-          <div className="flex justify-center gap-4 md:gap-8 flex-wrap">
-            {opponents.map((opp) => {
-              const isOpponentTurn = gameState.turnIndex === opp.realIndex;
-              return (
-                <div
-                  key={opp.id}
-                  className={`relative flex flex-col items-center transition-all duration-300 ${
-                    isOpponentTurn ? "scale-110" : "opacity-80 scale-90"
-                  }`}
-                >
-                  {isOpponentTurn && (
-                    <div className="absolute -top-8 animate-bounce text-yellow-400 font-bold text-sm tracking-widest uppercase">
-                      {opp.isBot ? "Computing..." : "Thinking..."}
-                    </div>
-                  )}
+        {/* Main Content - Increased padding to push content down */}
+        <div className="flex-1 flex flex-col pt-24 pb-4 h-screen">
+          {/* Top Half: Marketplace (Opponents) & Trading Desk (Action) */}
+          <div className="flex-1 flex flex-col relative">
+            {/* Opponents: Top Grid/Flex */}
+            <div className="flex justify-center flex-wrap gap-4 p-2 z-10 min-h-[120px]">
+              {opponents.map((opp) => {
+                const isOpponentTurn = gameState.turnIndex === opp.realIndex;
+                return (
                   <div
-                    className={`
-                                w-20 h-20 rounded-full border-4 flex items-center justify-center bg-gray-800 shadow-lg relative
-                                ${
-                                  isOpponentTurn
-                                    ? "border-yellow-400 shadow-yellow-500/50"
-                                    : "border-gray-600"
-                                }
-                            `}
+                    key={opp.id}
+                    className={`flex flex-col items-center transition-all duration-300 ${
+                      isOpponentTurn
+                        ? "scale-105 opacity-100"
+                        : "opacity-70 scale-95"
+                    }`}
                   >
-                    {opp.isBot ? (
-                      <Bot className="text-white" size={32} />
-                    ) : (
-                      <span className="text-2xl text-white font-bold">
-                        {opp.name[0]}
-                      </span>
-                    )}
-                    <div className="absolute -bottom-2 bg-gray-900 px-2 py-0.5 rounded text-[10px] text-white font-bold truncate max-w-full">
-                      {opp.name}
+                    <div
+                      className={`relative rounded-lg bg-[#0f172a] border-2 p-2 flex flex-col items-center shadow-lg w-20 md:w-24
+                            ${
+                              isOpponentTurn
+                                ? "border-orange-500 shadow-orange-500/30"
+                                : "border-slate-700"
+                            }`}
+                    >
+                      <div className="relative">
+                        {opp.isBot ? (
+                          <Bot className="text-slate-400" />
+                        ) : (
+                          <Users className="text-slate-400" />
+                        )}
+                        <div className="absolute -top-2 -right-2 bg-red-600 text-white text-[10px] font-bold w-5 h-5 rounded-full flex items-center justify-center border border-white">
+                          {opp.hand.length}
+                        </div>
+                      </div>
+                      <div className="text-[10px] font-bold text-slate-300 mt-1 truncate w-full text-center">
+                        {opp.name}
+                      </div>
+                      {isOpponentTurn && (
+                        <div className="absolute -top-3 bg-orange-500 text-black text-[8px] font-bold px-2 py-0.5 rounded-full animate-bounce">
+                          PLAYING
+                        </div>
+                      )}
                     </div>
                   </div>
-                  <div className="mt-2 relative">
-                    <CardBack count={opp.hand.length} />
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+                );
+              })}
+            </div>
 
-          {/* Center Area: Status & Logs */}
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-sm pointer-events-none text-center">
-            {gameState.logs && gameState.logs.length > 0 && (
-              <div className="mb-4 space-y-1">
-                {gameState.logs.slice(-1).map((log, i) => (
-                  <div
-                    key={i}
-                    className="inline-block bg-black/60 text-white px-4 py-2 rounded-full text-sm font-bold backdrop-blur-sm animate-in zoom-in slide-in-from-bottom-2 fade-in"
-                  >
-                    {log.text}
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {isMyTurn && !gameState.winnerId && (
-              <div className="animate-pulse">
-                <div className="text-3xl font-black text-white drop-shadow-lg stroke-black">
-                  YOUR TURN
+            {/* Center Action Area - The "Table" */}
+            <div className="flex-1 flex flex-col items-center justify-center z-0 relative min-h-[150px]">
+              {/* Game Log / Status Notification */}
+              {gameState.logs.length > 0 && (
+                <div className="mb-4 px-4 py-1 rounded-full bg-black/40 backdrop-blur-sm text-orange-400 border border-orange-500/20 text-xs md:text-sm font-serif">
+                  {gameState.logs[gameState.logs.length - 1].text}
                 </div>
-                <div className="text-yellow-300 font-bold text-lg">
-                  Pick a card to pass!
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Player Hand Area (Bottom) */}
-          <div className="relative z-20 mt-auto">
-            {/* Action Bar */}
-            <div className="flex justify-center mb-4 min-h-[60px]">
-              {isMyTurn && selectedCardIndex !== null && (
-                <button
-                  onClick={handleManualPass}
-                  className="bg-gradient-to-r from-orange-500 to-red-600 text-white px-8 py-3 rounded-full font-black text-lg shadow-xl hover:scale-105 active:scale-95 transition flex items-center gap-2 border-2 border-white/20"
-                >
-                  Pass Card <ArrowRight />
-                </button>
               )}
-            </div>
 
-            {/* Cards */}
-            <div className="flex justify-center items-end -space-x-4 pb-4">
-              {sortedHandIndices.map((cardData, visualIndex) => (
-                <div
-                  key={cardData.id}
-                  style={{
-                    zIndex:
-                      isMyTurn && selectedCardIndex === cardData.originalIndex
-                        ? 50
-                        : visualIndex,
-                    transform: `rotate(${
-                      (visualIndex - (me.hand.length - 1) / 2) * 5
-                    }deg) translateY(${
-                      isMyTurn && selectedCardIndex === cardData.originalIndex
-                        ? "-20px"
-                        : "0px"
-                    })`,
-                  }}
-                  className="transition-all duration-300 hover:-translate-y-4"
-                >
-                  <Card
-                    type={cardData.type}
-                    isSelected={
-                      isMyTurn && selectedCardIndex === cardData.originalIndex
-                    }
-                    onClick={() =>
-                      isMyTurn && setSelectedCardIndex(cardData.originalIndex)
-                    }
-                  />
-                </div>
-              ))}
-            </div>
-
-            {/* Player Badge */}
-            <div className="absolute bottom-4 left-4 bg-black/40 backdrop-blur rounded-lg px-4 py-2 text-white border border-white/10">
-              <div className="text-xs text-gray-300 uppercase font-bold">
-                You
-              </div>
-              <div className="font-bold flex items-center gap-2">
-                {me.name}
-                {me.hand.length > 5 && (
-                  <span className="text-xs bg-red-500 px-1 rounded animate-pulse">
-                    OVERFLOW
-                  </span>
+              {/* Turn Indicator / Action Button Placement */}
+              <div className="h-16 flex items-center justify-center">
+                {isMyTurn && selectedCardIndex !== null ? (
+                  <MarketButton
+                    onClick={handleManualPass}
+                    className="animate-in zoom-in px-8 py-3 shadow-[0_0_30px_rgba(249,115,22,0.4)] text-lg"
+                  >
+                    Pass Card <ArrowRight size={20} className="ml-2" />
+                  </MarketButton>
+                ) : isMyTurn ? (
+                  <div className="animate-pulse flex flex-col items-center">
+                    <h2 className="text-3xl font-black text-orange-500 drop-shadow-md tracking-wider">
+                      YOUR TURN
+                    </h2>
+                    <span className="text-slate-400 text-sm">
+                      Select a card from your hand
+                    </span>
+                  </div>
+                ) : (
+                  <div className="text-slate-500 text-sm italic">
+                    Waiting for trades...
+                  </div>
                 )}
               </div>
             </div>
           </div>
+
+          {/* Bottom Half: Player Inventory (Hand) */}
+          <div className="mt-auto flex flex-col items-center w-full max-w-5xl mx-auto z-20">
+            {/* Player Name Tag */}
+            <div className="bg-[#1e293b] border border-orange-500/30 rounded-t-lg px-6 py-1 shadow-lg mb-[-10px] relative z-0">
+              <span className="text-slate-400 text-[10px] font-bold uppercase mr-2">
+                YOU
+              </span>
+              <span className="text-orange-500 font-serif font-bold">
+                {me.name}
+              </span>
+            </div>
+
+            {/* Cards Container - Improved Responsiveness */}
+            <div className="w-full flex justify-center items-end h-48 md:h-64 pb-2 px-4 overflow-x-auto no-scrollbar">
+              {" "}
+              {/* Added overflow-x-auto */}
+              <div
+                className="flex justify-center items-end -space-x-8 md:-space-x-12 hover:-space-x-3 transition-all duration-300 w-auto" // Adjusted spacing and min-width
+                style={{ paddingBottom: "10px" }} // Add padding for hover lift
+              >
+                {sortedHandIndices.map((cardData, visualIndex) => {
+                  const isSelected =
+                    isMyTurn && selectedCardIndex === cardData.originalIndex;
+                  const totalCards = me.hand.length;
+                  // Reduced rotation for mobile to keep cards more upright and readable
+                  const rotateDeg =
+                    (visualIndex - (totalCards - 1) / 2) *
+                    (window.innerWidth < 768 ? 2 : 4);
+                  const translateY = isSelected
+                    ? -40
+                    : Math.abs(visualIndex - (totalCards - 1) / 2) *
+                      (window.innerWidth < 768 ? 2 : 5);
+                  return (
+                    <div
+                      key={cardData.id}
+                      style={{
+                        zIndex: isSelected ? 50 : visualIndex,
+                        transform: `rotate(${rotateDeg}deg) translateY(${translateY}px)`,
+                        transformOrigin: "bottom center",
+                      }}
+                      className="transition-all duration-300 cursor-pointer hover:z-40 shrink-0" // Added shrink-0
+                    >
+                      <CardDisplay
+                        type={cardData.type}
+                        highlight={isSelected}
+                        onClick={() =>
+                          isMyTurn &&
+                          setSelectedCardIndex(cardData.originalIndex)
+                        }
+                      />
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
         </div>
+
+        <FruitSellerLogo />
       </div>
     );
   }
 
   return null;
 }
+//final done
