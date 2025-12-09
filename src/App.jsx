@@ -43,6 +43,7 @@ import {
   History,
   Shield,
   BookOpen,
+  Hammer,
 } from "lucide-react";
 
 // --- Firebase Config & Init ---
@@ -59,6 +60,7 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 
 const APP_ID = typeof __app_id !== "undefined" ? __app_id : "fruit-seller-game";
+const GAME_ID = "6";
 
 // --- Game Constants & Thematic Data ---
 const FRUITS = {
@@ -538,6 +540,7 @@ export default function FruitSellerGame() {
   const [showRules, setShowRules] = useState(false);
   const [showLogs, setShowLogs] = useState(false);
   const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
+  const [isMaintenance, setIsMaintenance] = useState(false);
 
   // --- Auth & Listener ---
   useEffect(() => {
@@ -601,6 +604,43 @@ export default function FruitSellerGame() {
       return () => clearTimeout(timer);
     }
   }, [gameState, user]);
+
+  // ... existing auth useEffect ...
+
+  // --- ADD THIS EFFECT ---
+  useEffect(() => {
+    const unsub = onSnapshot(doc(db, "game_hub_settings", "config"), (doc) => {
+      if (doc.exists()) {
+        const data = doc.data();
+        if (data[GAME_ID]?.maintenance) {
+          setIsMaintenance(true);
+        } else {
+          setIsMaintenance(false);
+        }
+      }
+    });
+    return () => unsub();
+  }, []);
+
+  // --- ADD THIS BLOCK ---
+  if (isMaintenance) {
+    return (
+      <div className="min-h-screen bg-gray-950 flex flex-col items-center justify-center text-white p-4 text-center">
+        <div className="bg-orange-500/10 p-8 rounded-2xl border border-orange-500/30">
+          <Hammer
+            size={64}
+            className="text-orange-500 mx-auto mb-4 animate-bounce"
+          />
+          <h1 className="text-3xl font-bold mb-2">Under Maintenance</h1>
+          <p className="text-gray-400">
+            Market closed for cleaning. Fresh shipment arriving soon.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  // ... existing code: if (view === "menu") { ...
   // --- Actions ---
   const createRoom = async () => {
     if (!playerName.trim()) return setError("Please enter your name.");
