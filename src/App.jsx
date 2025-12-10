@@ -44,6 +44,8 @@ import {
   Shield,
   BookOpen,
   Hammer,
+  Gamepad2,
+  Sparkles,
 } from "lucide-react";
 
 // --- Firebase Config & Init ---
@@ -53,7 +55,7 @@ const firebaseConfig = {
   projectId: "game-hub-ff8aa",
   storageBucket: "game-hub-ff8aa.firebasestorage.app",
   messagingSenderId: "586559578902",
-  appId: "1:586559578902:web:43740f2189a0de886aa637"
+  appId: "1:586559578902:web:43740f2189a0de886aa637",
 };
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
@@ -626,6 +628,7 @@ export default function FruitSellerGame() {
   if (isMaintenance) {
     return (
       <div className="min-h-screen bg-gray-950 flex flex-col items-center justify-center text-white p-4 text-center">
+        {/* First Box */}
         <div className="bg-orange-500/10 p-8 rounded-2xl border border-orange-500/30">
           <Hammer
             size={64}
@@ -636,6 +639,21 @@ export default function FruitSellerGame() {
             Market closed for cleaning. Fresh shipment arriving soon.
           </p>
         </div>
+
+        {/* Add Spacing Between Boxes */}
+        <div className="h-8"></div>
+
+        {/* Clickable Second Card */}
+        <a href="https://rawfidkshuvo.github.io/gamehub/">
+          <div className="flex items-center justify-center gap-3 mb-2">
+            <div className="text-center pb-12 animate-pulse">
+              <div className="inline-flex items-center gap-3 px-8 py-4 bg-slate-900/50 rounded-full border border-indigo-500/20 text-indigo-300 font-bold tracking-widest text-sm uppercase backdrop-blur-sm">
+                <Sparkles size={16} /> Visit Gamehub...Try our other releases...{" "}
+                <Sparkles size={16} />
+              </div>
+            </div>
+          </div>
+        </a>
       </div>
     );
   }
@@ -1324,4 +1342,3 @@ export default function FruitSellerGame() {
 
   return null;
 }
-//final done
