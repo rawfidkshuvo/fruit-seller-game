@@ -46,6 +46,7 @@ import {
   Hammer,
   Gamepad2,
   Sparkles,
+  Check,
 } from "lucide-react";
 
 // --- Firebase Config & Init ---
@@ -193,7 +194,7 @@ const FloatingBackground = () => (
 
 const FruitSellerLogo = () => (
   <div className="flex items-center justify-center gap-1 opacity-40 pb-2 pt-2 relative z-10">
-    <Store size={12} className="text-orange-500" />
+    <Citrus size={12} className="text-orange-500" />
     <span className="text-[10px] font-black tracking-widest text-orange-500 uppercase">
       FRUIT SELLER
     </span>
@@ -211,9 +212,9 @@ const LeaveConfirmModal = ({
     <div className="bg-slate-800 rounded-xl border border-slate-700 p-6 max-w-sm w-full text-center shadow-2xl">
       <h3 className="text-xl font-bold text-white mb-2">Close Stall?</h3>
       <p className="text-slate-400 mb-6 text-sm">
-        {inGame
-          ? "Leaving now will collapse the market for everyone!"
-          : "Leaving the market lobby will disconnect you."}
+        {isHost
+          ? "Closing the stall will end the game for everyone!"
+          : "Leaving now will disconnect you from the market."}
       </p>
       <div className="flex flex-col gap-3">
         <button
@@ -236,7 +237,8 @@ const LeaveConfirmModal = ({
           onClick={onConfirmLeave}
           className="bg-red-600 hover:bg-red-500 text-white py-3 rounded font-bold transition-colors flex items-center justify-center gap-2"
         >
-          <LogOut size={18} /> Leave Market
+          <LogOut size={18} />{" "}
+          {isHost ? "Close Market (End All)" : "Leave Market"}
         </button>
       </div>
     </div>
@@ -458,42 +460,97 @@ const WinnerModal = ({
   onRestart,
   isHost,
   onReturnToLobby,
-}) => (
-  <div className="fixed inset-0 bg-black/90 z-[100] flex items-center justify-center p-4 animate-in fade-in duration-500 backdrop-blur-sm">
-    <div className="bg-[#1e293b] rounded-xl p-8 max-w-md w-full text-center relative overflow-hidden shadow-2xl border-2 border-orange-500">
-      <div className="absolute inset-0 bg-gradient-to-b from-orange-900/20 to-black opacity-50"></div>
-      <Crown className="w-24 h-24 mx-auto text-orange-500 mb-4 animate-bounce drop-shadow-[0_0_15px_rgba(249,115,22,0.5)]" />
-      <h2 className="text-4xl font-serif font-black text-white mb-2 tracking-wide">
-        {isMe ? "YOU WON!" : `${winnerName} WINS!`}
-      </h2>
-      <p className="text-slate-300 mb-8 text-lg">
-        Cornered the market with 5 matching fruits!
-      </p>
+  roomId,
+  userId,
+  players,
+  readyPlayers = [],
+}) => {
+  const [isReady, setIsReady] = useState(false);
 
-      {isHost ? (
-        <div className="flex flex-col gap-3 relative z-10">
-          <MarketButton
-            onClick={onRestart}
-            variant="success"
-            className="w-full text-lg"
-          >
-            <Play fill="currentColor" size={20} /> Play Again
-          </MarketButton>
-          <button
-            onClick={onReturnToLobby}
-            className="w-full py-3 rounded-lg font-bold transition-all bg-slate-700 hover:bg-slate-600 text-white flex items-center justify-center gap-2"
-          >
-            <Home size={20} /> Return to Lobby
-          </button>
-        </div>
-      ) : (
-        <div className="text-slate-500 italic animate-pulse font-serif">
-          Waiting for the Market Master to restart...
-        </div>
-      )}
+  // Check if this user has already voted ready
+  useEffect(() => {
+    if (readyPlayers.includes(userId)) {
+      setIsReady(true);
+    }
+  }, [readyPlayers, userId]);
+
+  const handleReady = async () => {
+    setIsReady(true);
+    await updateDoc(
+      doc(db, "artifacts", APP_ID, "public", "data", "rooms", roomId),
+      {
+        readyPlayers: arrayUnion(userId),
+      }
+    );
+  };
+
+  const guestCount = players.filter((p) => !p.isBot).length - 1; // All humans minus host
+  const readyCount = readyPlayers.length; // Guests who clicked ready
+
+  // Host can proceed if all GUESTS are ready (or everyone excluding themselves if logic varies)
+  // Assuming 'readyPlayers' only gets populated by guests clicking the button.
+  // If no guests, host can proceed immediately.
+  const canProceed = guestCount <= 0 || readyCount >= guestCount;
+
+  return (
+    <div className="fixed inset-0 bg-black/90 z-[100] flex items-center justify-center p-4 animate-in fade-in duration-500 backdrop-blur-sm">
+      <div className="bg-[#1e293b] rounded-xl p-8 max-w-md w-full text-center relative overflow-hidden shadow-2xl border-2 border-orange-500">
+        <div className="absolute inset-0 bg-gradient-to-b from-orange-900/20 to-black opacity-50"></div>
+        <Crown className="w-24 h-24 mx-auto text-orange-500 mb-4 animate-bounce drop-shadow-[0_0_15px_rgba(249,115,22,0.5)]" />
+        <h2 className="text-4xl font-serif font-black text-white mb-2 tracking-wide">
+          {isMe ? "YOU WON!" : `${winnerName} WINS!`}
+        </h2>
+        <p className="text-slate-300 mb-8 text-lg">
+          Cornered the market with 5 matching fruits!
+        </p>
+
+        {isHost ? (
+          <div className="flex flex-col gap-3 relative z-10">
+            <div className="text-sm text-slate-400 mb-2 font-mono">
+              {canProceed
+                ? "All traders are ready!"
+                : `Waiting for traders... (${readyCount}/${guestCount})`}
+            </div>
+            <MarketButton
+              onClick={onRestart}
+              disabled={!canProceed}
+              variant="success"
+              className="w-full text-lg"
+            >
+              <Play fill="currentColor" size={20} /> Play Again
+            </MarketButton>
+            <button
+              onClick={onReturnToLobby}
+              disabled={!canProceed}
+              className="w-full py-3 rounded-lg font-bold transition-all bg-slate-700 hover:bg-slate-600 text-white flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <Home size={20} /> Return to Lobby
+            </button>
+          </div>
+        ) : (
+          <div className="relative z-10 space-y-4">
+            {!isReady ? (
+              <button
+                onClick={handleReady}
+                className="w-full py-3 rounded-lg font-bold transition-all bg-emerald-600 hover:bg-emerald-500 text-white flex items-center justify-center gap-2 shadow-lg shadow-emerald-900/20 animate-pulse"
+              >
+                <CheckCircle size={20} /> Ready for Next Game
+              </button>
+            ) : (
+              <div className="flex flex-col items-center gap-2 text-emerald-500 font-bold bg-emerald-900/20 p-3 rounded-lg border border-emerald-500/30">
+                <Check size={24} />
+                <span>You are ready!</span>
+                <span className="text-slate-400 text-xs font-normal">
+                  Waiting for host...
+                </span>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
     </div>
-  </div>
-);
+  );
+};
 
 const LogViewer = ({ logs, onClose }) => (
   <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4 backdrop-blur-sm">
@@ -533,9 +590,15 @@ const LogViewer = ({ logs, onClose }) => (
 export default function FruitSellerGame() {
   const [user, setUser] = useState(null);
   const [view, setView] = useState("menu");
-  const [roomId, setRoomId] = useState(null);
+  // Initialize state from local storage to persist session on refresh
+  const [roomId, setRoomId] = useState(
+    () => localStorage.getItem("fs_roomId") || null
+  );
+  const [playerName, setPlayerName] = useState(
+    () => localStorage.getItem("fs_playerName") || ""
+  );
+
   const [gameState, setGameState] = useState(null);
-  const [playerName, setPlayerName] = useState("");
   const [roomCodeInput, setRoomCodeInput] = useState("");
   const [error, setError] = useState("");
   const [selectedCardIndex, setSelectedCardIndex] = useState(null);
@@ -557,6 +620,19 @@ export default function FruitSellerGame() {
     const unsubscribe = onAuthStateChanged(auth, (u) => setUser(u));
     return () => unsubscribe();
   }, []);
+
+  // --- Persistence Logic ---
+  // Save roomId and playerName to localStorage whenever they change
+  useEffect(() => {
+    if (roomId) localStorage.setItem("fs_roomId", roomId);
+    else localStorage.removeItem("fs_roomId");
+  }, [roomId]);
+
+  useEffect(() => {
+    if (playerName) localStorage.setItem("fs_playerName", playerName);
+  }, [playerName]);
+
+  // --- Room Listener ---
   useEffect(() => {
     if (!roomId || !user) return;
     const roomRef = doc(
@@ -585,6 +661,7 @@ export default function FruitSellerGame() {
           setView("game");
         else setView("lobby");
       } else {
+        // Room deleted (Host left or forced close)
         setRoomId(null);
         setView("menu");
         setError("Market closed by the Master.");
@@ -592,6 +669,7 @@ export default function FruitSellerGame() {
     });
     return () => unsubscribe();
   }, [roomId, user]);
+
   // --- Bot Turn Logic (Host Only) ---
   useEffect(() => {
     if (!gameState || gameState.status !== "playing" || !user) return;
@@ -607,9 +685,7 @@ export default function FruitSellerGame() {
     }
   }, [gameState, user]);
 
-  // ... existing auth useEffect ...
-
-  // --- ADD THIS EFFECT ---
+  // --- Maintenance Check ---
   useEffect(() => {
     const unsub = onSnapshot(doc(db, "game_hub_settings", "config"), (doc) => {
       if (doc.exists()) {
@@ -624,7 +700,6 @@ export default function FruitSellerGame() {
     return () => unsub();
   }, []);
 
-  // --- ADD THIS BLOCK ---
   if (isMaintenance) {
     return (
       <div className="min-h-screen bg-gray-950 flex flex-col items-center justify-center text-white p-4 text-center">
@@ -658,7 +733,6 @@ export default function FruitSellerGame() {
     );
   }
 
-  // ... existing code: if (view === "menu") { ...
   // --- Actions ---
   const createRoom = async () => {
     if (!playerName.trim()) return setError("Please enter your name.");
@@ -680,6 +754,7 @@ export default function FruitSellerGame() {
         maxPlayers: 4,
         turnIndex: 0,
         logs: [],
+        readyPlayers: [], // Track who is ready for rematch
       }
     );
     setRoomId(newRoomId);
@@ -753,6 +828,7 @@ export default function FruitSellerGame() {
         turnIndex: 0,
         winnerId: null,
         logs: [{ text: "Market Opened!", type: "neutral" }],
+        readyPlayers: [], // Reset for next game
       }
     );
   };
@@ -815,6 +891,7 @@ export default function FruitSellerGame() {
   const handleManualPass = () => {
     if (selectedCardIndex !== null) performPass(selectedCardIndex);
   };
+
   const leaveRoom = async () => {
     if (!roomId || !user) return;
     try {
@@ -834,12 +911,8 @@ export default function FruitSellerGame() {
         const isHost = data.hostId === user.uid;
 
         if (isHost) {
-          if (data.status === "lobby") {
-            await deleteDoc(roomRef);
-            // Destroy room
-          } else {
-            await handleGameAbandon(roomRef, data);
-          }
+          // If Host leaves, ALWAYS destroy room to force all players home
+          await deleteDoc(roomRef);
         } else {
           // Guest Logic
           if (data.status === "lobby") {
@@ -853,12 +926,16 @@ export default function FruitSellerGame() {
     } catch (err) {
       console.error(err);
     }
+    // Local cleanup
     setRoomId(null);
     setView("menu");
     setShowLeaveConfirm(false);
   };
 
   const handleGameAbandon = async (roomRef, data) => {
+    // If a guest leaves during game, we just mark it as finished/botched for now
+    // or we could let the game continue with a bot?
+    // Current logic: Ends game.
     await updateDoc(roomRef, {
       status: "finished",
       players: data.players.filter((p) => p.id !== user.uid), // Remove the leaver
@@ -880,6 +957,7 @@ export default function FruitSellerGame() {
         turnIndex: 0,
         winnerId: null,
         logs: [],
+        readyPlayers: [], // Reset ready status
         players: gameState.players.map((p) => ({
           ...p,
           hand: [],
@@ -916,15 +994,9 @@ export default function FruitSellerGame() {
         {showRules && <GameGuideModal onClose={() => setShowRules(false)} />}
         <FloatingBackground />
 
-        {/* Vertical Centering Fix: 
-            Instead of using justify-center on the main container which fights with mt-auto,
-            we use a flex-1 wrapper that takes up all available space and centers its content 
-            within that space.
-        */}
         <div className="flex-1 flex flex-col items-center justify-center w-full z-10 px-4">
-          {/* Header Section with Blooming Effect */}
           <div className="text-center mb-10 animate-in fade-in zoom-in duration-700 w-full">
-            <Apple
+            <Citrus
               size={64}
               className="text-orange-500 mx-auto mb-4 animate-bounce drop-shadow-[0_0_15px_rgba(249,115,22,0.5)]"
             />
@@ -936,7 +1008,6 @@ export default function FruitSellerGame() {
             </p>
           </div>
 
-          {/* Input/Menu Section with Slide Effect */}
           <div className="bg-gray-900/80 backdrop-blur border border-gray-700 p-8 rounded-2xl w-full max-w-md shadow-2xl animate-in slide-in-from-bottom-10 duration-700 delay-100">
             {error && (
               <div className="bg-red-900/50 text-red-200 p-2 mb-4 rounded text-center text-sm border border-red-800 flex items-center justify-center gap-2">
@@ -982,7 +1053,6 @@ export default function FruitSellerGame() {
           </div>
         </div>
 
-        {/* Footer stays at bottom because the wrapper above is flex-1 */}
         <div className="z-10 w-full bg-transparent">
           <FruitSellerLogo />
         </div>
@@ -1162,6 +1232,10 @@ export default function FruitSellerGame() {
             isHost={gameState.hostId === user.uid}
             onRestart={startGame}
             onReturnToLobby={resetToLobby}
+            roomId={roomId}
+            userId={user.uid}
+            players={gameState.players}
+            readyPlayers={gameState.readyPlayers || []}
           />
         )}
 
