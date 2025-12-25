@@ -1054,7 +1054,6 @@ export default function FruitSellerGame() {
         </div>
 
         <div className="z-10 w-full bg-transparent">
-          <FruitSellerLogo />
         </div>
       </div>
     );
