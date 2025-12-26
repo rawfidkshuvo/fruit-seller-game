@@ -1052,10 +1052,8 @@ export default function FruitSellerGame() {
             </button>
           </div>
         </div>
-
-        <div className="z-10 w-full bg-transparent">
-        </div>
-        <div className="absolute bottom-4 text-slate-600 text-xs text-center">
+        <div className="z-10 w-full bg-transparent"></div>
+        <div className="absolute bottom-4 w-full text-slate-600 text-xs text-center">
           Developed by <strong>RAWFID K SHUVO</strong>. Visit{" "}
           <a
             href="https://rawfidkshuvo.github.io/gamehub/"
