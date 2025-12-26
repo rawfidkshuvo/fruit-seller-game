@@ -1053,13 +1053,15 @@ export default function FruitSellerGame() {
           </div>
         </div>
         <div className="z-10 w-full bg-transparent"></div>
-        <div className="absolute bottom-4 w-full text-slate-600 text-xs text-center">
+        <div className="absolute bottom-4 w-full text-slate-600 text-xs text-center z-50">
           Developed by <strong>RAWFID K SHUVO</strong>. Visit{" "}
           <a
             href="https://rawfidkshuvo.github.io/gamehub/"
             target="_blank"
             rel="noopener noreferrer"
-            className="text-orange-500 underline hover:text-orange-600"
+            // Added 'relative' and 'z-50' to the link itself just to be safe,
+            // though the parent div change usually is enough.
+            className="text-orange-500 underline hover:text-orange-600 relative z-50 cursor-pointer"
           >
             GAMEHUB
           </a>{" "}
