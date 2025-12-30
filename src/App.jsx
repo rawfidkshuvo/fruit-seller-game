@@ -493,7 +493,7 @@ const WinnerModal = ({
   const canProceed = guestCount <= 0 || readyCount >= guestCount;
 
   return (
-    <div className="fixed inset-0 bg-black/90 z-[100] flex items-center justify-center p-4 animate-in fade-in duration-500 backdrop-blur-sm">
+    <div className="fixed inset-0 top-14 bg-black/90 z-[150] flex items-center justify-center p-4 animate-in fade-in duration-500 backdrop-blur-sm">
       <div className="bg-[#1e293b] rounded-xl p-8 max-w-md w-full text-center relative overflow-hidden shadow-2xl border-2 border-orange-500">
         <div className="absolute inset-0 bg-gradient-to-b from-orange-900/20 to-black opacity-50"></div>
         <Crown className="w-24 h-24 mx-auto text-orange-500 mb-4 animate-bounce drop-shadow-[0_0_15px_rgba(249,115,22,0.5)]" />
@@ -553,7 +553,7 @@ const WinnerModal = ({
 };
 
 const LogViewer = ({ logs, onClose }) => (
-  <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4 backdrop-blur-sm">
+  <div className="fixed top-16 right-4 w-64 max-h-60 bg-gray-900/95 border border-gray-700 rounded-xl z-[155] overflow-y-auto p-2 shadow-2xl">
     <div className="bg-[#1e293b] w-full md:max-w-md h-[60vh] rounded-xl flex flex-col border border-orange-500 shadow-2xl overflow-hidden">
       <div className="p-4 border-b border-orange-500/30 flex justify-between items-center bg-black/20">
         <h3 className="text-orange-500 font-serif font-bold text-xl flex items-center gap-2">
@@ -1251,14 +1251,18 @@ export default function FruitSellerGame() {
         )}
 
         {/* Top Bar - Fixed at Top */}
-        <div className="fixed top-0 left-0 right-0 bg-[#1e293b] p-2 md:p-4 flex justify-between items-center z-50 shadow-md border-b border-orange-500/30 h-14 md:h-16">
+        <div className="fixed top-0 left-0 right-0 bg-[#1e293b] p-2 md:p-4 flex justify-between items-center z-[160] shadow-md border-b border-orange-500/30 h-14 md:h-16">
           <div className="font-bold text-orange-500 flex items-center gap-2 text-sm md:text-base font-serif truncate">
             <Store size={18} /> Market: {roomId}
           </div>
           <div className="flex gap-2">
             <button
-              onClick={() => setShowLogs(true)}
-              className="p-2 hover:bg-white/10 rounded transition-colors text-slate-300"
+              onClick={() => setShowLogs(!showLogs)}
+              className={`p-2 rounded-full ${
+                showLogs
+                  ? "bg-orange-900 text-orange-400"
+                  : "text-gray-400 hover:bg-gray-800"
+              }`}
             >
               <History size={20} />
             </button>
