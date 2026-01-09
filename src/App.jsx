@@ -201,6 +201,15 @@ const FruitSellerLogo = () => (
   </div>
 );
 
+const FruitSellerLogoBig = () => (
+  <div className="flex items-center justify-center gap-1 opacity-40 pb-2 pt-2 relative z-10">
+    <Citrus size={22} className="text-orange-500" />
+    <span className="text-[20px] font-black tracking-widest text-orange-500 uppercase">
+      FRUIT SELLER
+    </span>
+  </div>
+);
+
 const LeaveConfirmModal = ({
   onConfirmLeave,
   onConfirmLobby,
@@ -1048,7 +1057,7 @@ export default function FruitSellerGame() {
               onClick={() => setShowRules(true)}
               className="w-full text-sm text-gray-400 hover:text-white flex items-center justify-center gap-2 py-2"
             >
-              <BookOpen size={16} /> How to Play
+              <BookOpen size={16} /> Market Rules
             </button>
           </div>
         </div>
@@ -1079,6 +1088,7 @@ export default function FruitSellerGame() {
     return (
       <div className="min-h-screen bg-gray-900 text-white flex flex-col items-center justify-center p-6 relative">
         <FloatingBackground />
+        <FruitSellerLogoBig />
 
         {showRules && <GameGuideModal onClose={() => setShowRules(false)} />}
         {showLeaveConfirm && (
@@ -1097,7 +1107,7 @@ export default function FruitSellerGame() {
         <div className="z-10 w-full max-w-lg bg-gray-800/90 p-8 rounded-2xl border border-gray-700 shadow-2xl mb-4">
           <div className="flex justify-between items-center mb-8 border-b border-gray-700 pb-4">
             <h2 className="text-2xl font-serif text-orange-500">
-              Market: {roomId}
+              Fruit Stall: {roomId}
             </h2>
             <div className="flex items-center gap-4">
               <div className="flex items-center gap-2 text-sm text-gray-400">
@@ -1189,12 +1199,6 @@ export default function FruitSellerGame() {
                 Waiting for Host to start...
               </div>
             )}
-            <button
-              onClick={() => setShowRules(true)}
-              className="text-sm text-gray-400 hover:text-white flex items-center justify-center gap-2"
-            >
-              <BookOpen size={16} /> Game Rules
-            </button>
           </div>
         </div>
 
@@ -1253,7 +1257,7 @@ export default function FruitSellerGame() {
         {/* Top Bar - Fixed at Top */}
         <div className="fixed top-0 left-0 right-0 bg-[#1e293b] p-2 md:p-4 flex justify-between items-center z-[160] shadow-md border-b border-orange-500/30 h-14 md:h-16">
           <div className="font-bold text-orange-500 flex items-center gap-2 text-sm md:text-base font-serif truncate">
-            <Store size={18} /> Market: {roomId}
+            <Store size={18} /> Fruit Market
           </div>
           <div className="flex gap-2">
             <button
