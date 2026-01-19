@@ -51,12 +51,12 @@ import {
 
 // --- Firebase Config & Init ---
 const firebaseConfig = {
-  apiKey: "AIzaSyBjIjK53vVJW1y5RaqEFGSFp0ECVDBEe1o",
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
   authDomain: "game-hub-ff8aa.firebaseapp.com",
-  projectId: "game-hub-ff8aa",
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
   storageBucket: "game-hub-ff8aa.firebasestorage.app",
   messagingSenderId: "586559578902",
-  appId: "1:586559578902:web:43740f2189a0de886aa637",
+  appId: "1:586559578902:web:43740f2189a0de886aa637"
 };
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
