@@ -603,9 +603,7 @@ export default function FruitSellerGame() {
   const [roomId, setRoomId] = useState(
     () => localStorage.getItem("fs_roomId") || null
   );
-  const [playerName, setPlayerName] = useState(
-    () => localStorage.getItem("fs_playerName") || ""
-  );
+  
 
   const [gameState, setGameState] = useState(null);
   const [roomCodeInput, setRoomCodeInput] = useState("");
@@ -615,6 +613,15 @@ export default function FruitSellerGame() {
   const [showLogs, setShowLogs] = useState(false);
   const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
   const [isMaintenance, setIsMaintenance] = useState(false);
+
+  //read and fill global name
+  const [playerName, setPlayerName] = useState(
+    () => localStorage.getItem("gameHub_playerName") || ""
+  );
+  //set global name for all game
+  useEffect(() => {
+    if (playerName) localStorage.setItem("gameHub_playerName", playerName);
+  }, [playerName]);
 
   // --- Auth & Listener ---
   useEffect(() => {
@@ -637,9 +644,7 @@ export default function FruitSellerGame() {
     else localStorage.removeItem("fs_roomId");
   }, [roomId]);
 
-  useEffect(() => {
-    if (playerName) localStorage.setItem("fs_playerName", playerName);
-  }, [playerName]);
+  
 
   // --- Room Listener ---
   useEffect(() => {
