@@ -185,7 +185,7 @@ const FloatingBackground = ({ isShaking }) => (
       isShaking ? "animate-shake bg-red-900/20" : ""
     }`}
   >
-    <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-yellow-900/20 via-gray-950 to-black" />
+    <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(ellipse_at_top,var(--tw-gradient-stops))] from-yellow-900/20 via-gray-950 to-black" />
     <div className="absolute top-0 left-0 w-full h-full opacity-10">
       {[...Array(20)].map((_, i) => {
         const fruitKeys = Object.keys(FRUITS);
@@ -248,7 +248,7 @@ const LeaveConfirmModal = ({
   isHost,
   inGame,
 }) => (
-  <div className="fixed inset-0 bg-black/90 z-[200] flex items-center justify-center p-4 animate-in fade-in">
+  <div className="fixed inset-0 bg-black/90 z-200 flex items-center justify-center p-4 animate-in fade-in">
     <div className="bg-slate-800 rounded-xl border border-slate-700 p-6 max-w-sm w-full text-center shadow-2xl">
       <h3 className="text-xl font-bold text-white mb-2">Close Stall?</h3>
       <p className="text-slate-400 mb-6 text-sm">
@@ -343,7 +343,7 @@ const CardDisplay = ({
         ${isOpponent ? "" : "hover:border-gray-400"}
       `}
       >
-        <div className="w-full h-full bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-gray-700 to-gray-900 opacity-50 flex items-center justify-center">
+        <div className="w-full h-full bg-[radial-gradient(ellipse_at_center,var(--tw-gradient-stops))] from-gray-700 to-gray-900 opacity-50 flex items-center justify-center">
           <ShoppingBag
             className="text-gray-500 opacity-50"
             size={small ? 16 : 24}
@@ -419,7 +419,7 @@ const CardDisplay = ({
 };
 
 const GameGuideModal = ({ onClose }) => (
-  <div className="fixed inset-0 bg-black/95 z-[100] flex items-center justify-center p-0 md:p-4 backdrop-blur-md animate-in fade-in">
+  <div className="fixed inset-0 bg-black/95 z-100 flex items-center justify-center p-0 md:p-4 backdrop-blur-md animate-in fade-in">
     <div className="bg-[#1e293b] md:rounded-2xl w-full max-w-5xl h-full md:h-[90vh] overflow-hidden border-none md:border-2 border-orange-500 shadow-2xl flex flex-col relative">
       <div className="p-4 md:p-6 border-b border-orange-500/30 flex justify-between items-center bg-black/40">
         <div className="flex flex-col">
@@ -533,9 +533,9 @@ const WinnerModal = ({
   const canProceed = guestCount <= 0 || readyCount >= guestCount;
 
   return (
-    <div className="fixed inset-0 top-14 bg-black/90 z-[150] flex items-center justify-center p-4 animate-in fade-in duration-500 backdrop-blur-sm">
+    <div className="fixed inset-0 top-14 bg-black/90 z-150 flex items-center justify-center p-4 animate-in fade-in duration-500 backdrop-blur-sm">
       <div className="bg-[#1e293b] rounded-xl p-8 max-w-md w-full text-center relative overflow-hidden shadow-2xl border-2 border-orange-500">
-        <div className="absolute inset-0 bg-gradient-to-b from-orange-900/20 to-black opacity-50"></div>
+        <div className="absolute inset-0 bg-linear-to-b from-orange-900/20 to-black opacity-50"></div>
         <Crown className="w-24 h-24 mx-auto text-orange-500 mb-4 animate-bounce drop-shadow-[0_0_15px_rgba(249,115,22,0.5)]" />
         <h2 className="text-4xl font-serif font-black text-white mb-2 tracking-wide">
           {isMe ? "YOU WON!" : `${winnerName} WINS!`}
@@ -593,7 +593,7 @@ const WinnerModal = ({
 };
 
 const LogViewer = ({ logs, onClose }) => (
-  <div className="fixed top-16 right-4 w-64 max-h-60 bg-gray-900/95 border border-gray-700 rounded-xl z-[155] overflow-y-auto p-2 shadow-2xl">
+  <div className="fixed top-16 right-4 w-64 max-h-60 bg-gray-900/95 border border-gray-700 rounded-xl z-155 overflow-y-auto p-2 shadow-2xl">
     <div className="bg-[#1e293b] w-full md:max-w-md h-[60vh] rounded-xl flex flex-col border border-orange-500 shadow-2xl overflow-hidden">
       <div className="p-4 border-b border-orange-500/30 flex justify-between items-center bg-black/20">
         <h3 className="text-orange-500 font-serif font-bold text-xl flex items-center gap-2">
@@ -1045,7 +1045,7 @@ export default function FruitSellerGame() {
               size={64}
               className="text-orange-500 mx-auto mb-4 animate-bounce drop-shadow-[0_0_15px_rgba(249,115,22,0.5)]"
             />
-            <h1 className="text-5xl md:text-7xl font-black text-transparent bg-clip-text bg-gradient-to-b from-orange-300 to-orange-600 font-serif tracking-widest drop-shadow-md">
+            <h1 className="text-5xl md:text-7xl font-black text-transparent bg-clip-text bg-linear-to-b from-orange-300 to-orange-600 font-serif tracking-widest drop-shadow-md">
               FRUIT SELLER
             </h1>
             <p className="text-gray-400 tracking-[0.3em] uppercase mt-2">
@@ -1069,7 +1069,7 @@ export default function FruitSellerGame() {
 
             <button
               onClick={createRoom}
-              className="w-full bg-gradient-to-r from-orange-700 to-orange-600 hover:from-orange-600 hover:to-orange-500 p-4 rounded font-bold mb-4 flex items-center justify-center gap-2 border border-orange-500/30 shadow-[0_0_15px_rgba(249,115,22,0.2)] transition-all"
+              className="w-full bg-linear-to-r from-orange-700 to-orange-600 hover:from-orange-600 hover:to-orange-500 p-4 rounded font-bold mb-4 flex items-center justify-center gap-2 border border-orange-500/30 shadow-[0_0_15px_rgba(249,115,22,0.2)] transition-all"
             >
               <Store size={20} /> Open New Stall
             </button>
@@ -1291,7 +1291,7 @@ export default function FruitSellerGame() {
         )}
 
         {/* Top Bar - Fixed at Top */}
-        <div className="fixed top-0 left-0 right-0 bg-[#1e293b] p-2 md:p-4 flex justify-between items-center z-[160] shadow-md border-b border-orange-500/30 h-14 md:h-16">
+        <div className="fixed top-0 left-0 right-0 bg-[#1e293b] p-2 md:p-4 flex justify-between items-center z-160 shadow-md border-b border-orange-500/30 h-14 md:h-16">
           <div className="font-bold text-orange-500 flex items-center gap-2 text-sm md:text-base font-serif truncate">
             <Store size={18} /> Fruit Market
           </div>
