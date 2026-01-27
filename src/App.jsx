@@ -865,12 +865,16 @@ export default function FruitSellerGame() {
       ...p,
       hand: deck.splice(0, 5),
     }));
+
+    // 2. Calculate Random Start Index
+    const randomStartIndex = Math.floor(Math.random() * players.length);
+
     await updateDoc(
       doc(db, "artifacts", APP_ID, "public", "data", "rooms", roomId),
       {
         status: "playing",
         players: currentPlayers,
-        turnIndex: 0,
+        turnIndex: randomStartIndex,
         winnerId: null,
         logs: [{ text: "Market Opened!", type: "neutral" }],
         readyPlayers: [], // Reset for next game
