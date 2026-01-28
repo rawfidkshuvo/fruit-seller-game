@@ -52,11 +52,11 @@ import {
 // --- Firebase Config & Init ---
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
-  authDomain: "game-hub-ff8aa.firebaseapp.com",
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
   projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
-  storageBucket: "game-hub-ff8aa.firebasestorage.app",
-  messagingSenderId: "586559578902",
-  appId: "1:586559578902:web:43740f2189a0de886aa637"
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID,
 };
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
@@ -336,8 +336,8 @@ const CardDisplay = ({
           tiny
             ? "w-6 h-8 rounded-sm"
             : small
-            ? "w-10 h-14 rounded"
-            : "w-20 h-32 md:w-24 md:h-36 rounded-xl"
+              ? "w-10 h-14 rounded"
+              : "w-20 h-32 md:w-24 md:h-36 rounded-xl"
         } 
         bg-gray-800 border-2 border-gray-600 flex items-center justify-center shadow-lg transition-transform
         ${isOpponent ? "" : "hover:border-gray-400"}
@@ -520,7 +520,7 @@ const WinnerModal = ({
       doc(db, "artifacts", APP_ID, "public", "data", "rooms", roomId),
       {
         readyPlayers: arrayUnion(userId),
-      }
+      },
     );
   };
 
@@ -614,8 +614,8 @@ const LogViewer = ({ logs, onClose }) => (
               log.type === "win"
                 ? "bg-yellow-900/20 border-yellow-500 text-yellow-200"
                 : log.type === "action"
-                ? "bg-slate-800 border-slate-500 text-slate-300"
-                : "bg-slate-800 border-slate-600 text-slate-400"
+                  ? "bg-slate-800 border-slate-500 text-slate-300"
+                  : "bg-slate-800 border-slate-600 text-slate-400"
             }`}
           >
             {log.text}
@@ -632,9 +632,8 @@ export default function FruitSellerGame() {
   const [view, setView] = useState("menu");
   // Initialize state from local storage to persist session on refresh
   const [roomId, setRoomId] = useState(
-    () => localStorage.getItem("fs_roomId") || null
+    () => localStorage.getItem("fs_roomId") || null,
   );
-  
 
   const [gameState, setGameState] = useState(null);
   const [roomCodeInput, setRoomCodeInput] = useState("");
@@ -647,7 +646,7 @@ export default function FruitSellerGame() {
 
   //read and fill global name
   const [playerName, setPlayerName] = useState(
-    () => localStorage.getItem("gameHub_playerName") || ""
+    () => localStorage.getItem("gameHub_playerName") || "",
   );
   //set global name for all game
   useEffect(() => {
@@ -675,8 +674,6 @@ export default function FruitSellerGame() {
     else localStorage.removeItem("fs_roomId");
   }, [roomId]);
 
-  
-
   // --- Room Listener ---
   useEffect(() => {
     if (!roomId || !user) return;
@@ -687,7 +684,7 @@ export default function FruitSellerGame() {
       "public",
       "data",
       "rooms",
-      roomId
+      roomId,
     );
     const unsubscribe = onSnapshot(roomRef, (snap) => {
       if (snap.exists()) {
@@ -800,7 +797,7 @@ export default function FruitSellerGame() {
         turnIndex: 0,
         logs: [],
         readyPlayers: [], // Track who is ready for rematch
-      }
+      },
     );
     setRoomId(newRoomId);
   };
@@ -816,7 +813,7 @@ export default function FruitSellerGame() {
       "public",
       "data",
       "rooms",
-      rId
+      rId,
     );
     try {
       const snap = await getDoc(roomRef);
@@ -874,7 +871,7 @@ export default function FruitSellerGame() {
         winnerId: null,
         logs: [{ text: "Market Opened!", type: "neutral" }],
         readyPlayers: [], // Reset for next game
-      }
+      },
     );
   };
 
@@ -887,7 +884,7 @@ export default function FruitSellerGame() {
     if (updatedPlayers[currentPlayerIdx].hand[cardIndex]) {
       const passedCard = updatedPlayers[currentPlayerIdx].hand.splice(
         cardIndex,
-        1
+        1,
       )[0];
       updatedPlayers[nextPlayerIdx].hand.push(passedCard);
     } else {
@@ -928,7 +925,7 @@ export default function FruitSellerGame() {
     updates.logs = logs.slice(-10);
     await updateDoc(
       doc(db, "artifacts", APP_ID, "public", "data", "rooms", roomId),
-      updates
+      updates,
     );
     setSelectedCardIndex(null);
   };
@@ -947,7 +944,7 @@ export default function FruitSellerGame() {
         "public",
         "data",
         "rooms",
-        roomId
+        roomId,
       );
       const snap = await getDoc(roomRef);
 
@@ -1008,7 +1005,7 @@ export default function FruitSellerGame() {
           hand: [],
           ready: true,
         })),
-      }
+      },
     );
     setShowLeaveConfirm(false);
   };
@@ -1209,9 +1206,9 @@ export default function FruitSellerGame() {
                       "public",
                       "data",
                       "rooms",
-                      roomId
+                      roomId,
                     ),
-                    { maxPlayers: parseInt(e.target.value) }
+                    { maxPlayers: parseInt(e.target.value) },
                   )
                 }
               >
