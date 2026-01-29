@@ -47,6 +47,7 @@ import {
   Gamepad2,
   Sparkles,
   Check,
+  Copy,
 } from "lucide-react";
 
 // --- Firebase Config & Init ---
@@ -56,7 +57,7 @@ const firebaseConfig = {
   projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
   storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
   messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
-  appId: import.meta.env.VITE_FIREBASE_APP_ID
+  appId: import.meta.env.VITE_FIREBASE_APP_ID,
 };
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
@@ -840,6 +841,21 @@ export default function FruitSellerGame() {
     }
   };
 
+  const copyToClipboard = () => {
+    try {
+      navigator.clipboard.writeText(roomId);
+      triggerFeedback("neutral", "COPIED!", "", CheckCircle);
+    } catch (e) {
+      const el = document.createElement("textarea");
+      el.value = roomId;
+      document.body.appendChild(el);
+      el.select();
+      document.execCommand("copy");
+      document.body.removeChild(el);
+      triggerFeedback("neutral", "COPIED!", "", CheckCircle);
+    }
+  };
+
   const startGame = async () => {
     if (!gameState) return;
     let currentPlayers = [...gameState.players];
@@ -1139,9 +1155,20 @@ export default function FruitSellerGame() {
 
         <div className="z-10 w-full max-w-lg bg-gray-800/90 p-8 rounded-2xl border border-gray-700 shadow-2xl mb-4">
           <div className="flex justify-between items-center mb-8 border-b border-gray-700 pb-4">
-            <h2 className="text-2xl font-serif text-orange-500">
-              Fruit Stall: {roomId}
-            </h2>
+            {/* Grouping Title and Copy Button together on the left */}
+            <div className="flex items-center gap-2">
+              <h2 className="text-2xl font-serif text-orange-500">
+                Fruit Stall:{" "}
+                <span className="text-white font-mono">{roomId}</span>
+              </h2>
+              <button
+                onClick={copyToClipboard}
+                className="p-2 hover:bg-white/10 rounded-full transition-colors text-gray-400 hover:text-white"
+                title="Copy Room ID"
+              >
+                <Copy size={16} />
+              </button>
+            </div>
             <div className="flex items-center gap-4">
               <div className="flex items-center gap-2 text-sm text-gray-400">
                 <Users size={16} /> {gameState.players.length}/
