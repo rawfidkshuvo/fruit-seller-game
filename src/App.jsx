@@ -780,7 +780,11 @@ export default function FruitSellerGame() {
   // --- Actions ---
   const createRoom = async () => {
     if (!playerName.trim()) return setError("Please enter your name.");
-    const newRoomId = Math.random().toString(36).substring(2, 6).toUpperCase();
+    const chars = "123456789ABCDEFGHIJKLMNPQRSTUVWXYZ";
+    let newRoomId = "";
+    for (let i = 0; i < 6; i++) {
+      newRoomId += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
     await setDoc(
       doc(db, "artifacts", APP_ID, "public", "data", "rooms", newRoomId),
       {
