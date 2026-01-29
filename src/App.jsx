@@ -644,6 +644,7 @@ export default function FruitSellerGame() {
   const [showLogs, setShowLogs] = useState(false);
   const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
   const [isMaintenance, setIsMaintenance] = useState(false);
+  const [isCopied, setIsCopied] = useState(false);
 
   //read and fill global name
   const [playerName, setPlayerName] = useState(
@@ -842,17 +843,30 @@ export default function FruitSellerGame() {
   };
 
   const copyToClipboard = () => {
+    const textToCopy = roomId;
+
+    // Logic to show the popup and hide it after 2 seconds
+    const handleSuccess = () => {
+      setIsCopied(true);
+      setTimeout(() => setIsCopied(false), 2000);
+
+      // Keep your existing global feedback if needed
+      if (triggerFeedback)
+        triggerFeedback("neutral", "COPIED!", "", CheckCircle);
+    };
+
     try {
-      navigator.clipboard.writeText(roomId);
-      triggerFeedback("neutral", "COPIED!", "", CheckCircle);
+      navigator.clipboard.writeText(textToCopy);
+      handleSuccess();
     } catch (e) {
+      // Fallback for older browsers
       const el = document.createElement("textarea");
-      el.value = roomId;
+      el.value = textToCopy;
       document.body.appendChild(el);
       el.select();
       document.execCommand("copy");
       document.body.removeChild(el);
-      triggerFeedback("neutral", "COPIED!", "", CheckCircle);
+      handleSuccess();
     }
   };
 
@@ -1156,18 +1170,39 @@ export default function FruitSellerGame() {
         <div className="z-10 w-full max-w-lg bg-gray-800/90 p-8 rounded-2xl border border-gray-700 shadow-2xl mb-4">
           <div className="flex justify-between items-center mb-8 border-b border-gray-700 pb-4">
             {/* Grouping Title and Copy Button together on the left */}
-            <div className="flex items-center gap-2">
-              <h2 className="text-2xl font-serif text-orange-500">
-                Fruit Stall:{" "}
-                <span className="text-white font-mono">{roomId}</span>
+            <div>
+              <h2 className="text-lg md:text-xl text-orange-500 font-bold uppercase">
+                Fruit Stall
               </h2>
-              <button
-                onClick={copyToClipboard}
-                className="p-2 hover:bg-white/10 rounded-full transition-colors text-gray-400 hover:text-white"
-                title="Copy Room ID"
-              >
-                <Copy size={16} />
-              </button>
+
+              {/* Flex container to align ID and Button side-by-side */}
+              <div className="flex items-center gap-3 mt-1">
+                <div className="text-2xl md:text-3xl font-mono text-white font-black">
+                  {roomId}
+                </div>
+
+                {/* 2. Container set to relative for positioning the popup */}
+                <div className="relative">
+                  <button
+                    onClick={copyToClipboard}
+                    className="p-2 hover:bg-white/10 rounded-full transition-colors text-gray-400 hover:text-white"
+                  >
+                    {/* Optional: Change icon to checkmark when copied */}
+                    {isCopied ? (
+                      <CheckCircle size={16} className="text-green-500" />
+                    ) : (
+                      <Copy size={16} />
+                    )}
+                  </button>
+
+                  {/* 3. The Copied Popup */}
+                  {isCopied && (
+                    <div className="absolute left-full ml-2 top-1/2 -translate-y-1/2 bg-green-500 text-black text-xs font-bold px-2 py-1 rounded shadow-lg animate-fade-in-up whitespace-nowrap">
+                      Copied!
+                    </div>
+                  )}
+                </div>
+              </div>
             </div>
             <div className="flex items-center gap-4">
               <div className="flex items-center gap-2 text-sm text-gray-400">
