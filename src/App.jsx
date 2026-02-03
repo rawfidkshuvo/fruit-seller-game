@@ -226,18 +226,18 @@ const FloatingBackground = ({ isShaking }) => (
 );
 
 const FruitSellerLogo = () => (
-  <div className="flex items-center justify-center gap-1 opacity-40 pb-2 pt-2 relative z-10">
-    <Citrus size={12} className="text-orange-500" />
-    <span className="text-[10px] font-black tracking-widest text-orange-500 uppercase">
+  <div className="flex items-center justify-center gap-1 opacity-40 mt-auto pb-2 pt-2 relative z-10">
+    <Citrus size={12} className="text-orange-400" />
+    <span className="text-[10px] font-black tracking-widest text-orange-400 uppercase">
       FRUIT SELLER
     </span>
   </div>
 );
 
 const FruitSellerLogoBig = () => (
-  <div className="flex items-center justify-center gap-1 opacity-40 pb-2 pt-2 relative z-10">
-    <Citrus size={22} className="text-orange-500" />
-    <span className="text-[20px] font-black tracking-widest text-orange-500 uppercase">
+  <div className="flex items-center justify-center gap-1 opacity-40 mt-auto pb-2 pt-2 relative z-10">
+    <Citrus size={22} className="text-orange-400" />
+    <span className="text-[20px] font-black tracking-widest text-orange-400 uppercase">
       FRUIT SELLER
     </span>
   </div>
