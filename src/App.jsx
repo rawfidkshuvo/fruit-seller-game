@@ -1,7 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
 import { initializeApp } from "firebase/app";
-import { usePersistentState } from "./hook/usePersistentState";
-
 import {
   getAuth,
   signInAnonymously,
@@ -635,7 +633,9 @@ export default function FruitSellerGame() {
   const [user, setUser] = useState(null);
   const [view, setView] = useState("menu");
   // Initialize state from local storage to persist session on refresh
-  const [roomId, setRoomId] = usePersistentState("fs_roomId", null);
+  const [roomId, setRoomId] = useState(
+    () => localStorage.getItem("fs_roomId") || null,
+  );
 
   const [gameState, setGameState] = useState(null);
   const [roomCodeInput, setRoomCodeInput] = useState("");
