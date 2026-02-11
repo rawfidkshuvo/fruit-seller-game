@@ -673,8 +673,9 @@ export default function FruitSellerGame() {
   // --- Persistence Logic ---
   // Save roomId and playerName to localStorage whenever they change
   useEffect(() => {
-    if (roomId) localStorage.setItem("fs_roomId", roomId);
-    else localStorage.removeItem("fs_roomId");
+    if (roomId) {
+      localStorage.setItem("fs_roomId", roomId);
+    }
   }, [roomId]);
 
   // --- Room Listener ---
