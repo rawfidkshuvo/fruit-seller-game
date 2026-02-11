@@ -651,6 +651,19 @@ export default function FruitSellerGame() {
   const [playerName, setPlayerName] = useState(
     () => localStorage.getItem("gameHub_playerName") || "",
   );
+
+  // persistent unique player id
+  const [playerId] = useState(() => {
+    let id = localStorage.getItem("fs_playerId");
+
+    if (!id) {
+      id = crypto.randomUUID();
+      localStorage.setItem("fs_playerId", id);
+    }
+
+    return id;
+  });
+
   //set global name for all game
   useEffect(() => {
     if (playerName) localStorage.setItem("gameHub_playerName", playerName);
