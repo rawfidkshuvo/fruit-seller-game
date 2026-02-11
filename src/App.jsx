@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { initializeApp } from "firebase/app";
-import { usePersistentState } from "./hooks/usePersistentState";
+import { usePersistentState } from "./hook/usePersistentState";
 
 import {
   getAuth,
